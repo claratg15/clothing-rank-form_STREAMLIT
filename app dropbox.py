@@ -63,7 +63,7 @@ def upload_to_dropbox(file_path, dropbox_path, token):
     dbx = dropbox.Dropbox(token)
     
     with open(file_path, "rb") as f:
-        dbx.files_upload(f.read(), dropbox_path, mode=dropbox.files.WriteMode.add)  # Cambiar a 'add' para no sobrescribir
+        dbx.files_upload(f.read(), dropbox_path, mode=dropbox.files.WriteMode.overwrite)  # Modo 'overwrite' para sobrescribir el archivo
 
 # Función para descargar el archivo CSV desde Dropbox
 def download_from_dropbox(dropbox_path, local_path, token):
@@ -118,4 +118,5 @@ if not st.session_state.response_saved:
             st.session_state.selected_images = []  # Eliminar las imágenes para evitar que se muestren de nuevo
 else:
     st.write("¡Ya has respondido la encuesta! Muchas gracias por participar.")
+
 
