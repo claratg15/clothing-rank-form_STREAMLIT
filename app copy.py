@@ -8,7 +8,7 @@ from pymongo import MongoClient
 
 # 🔐 Leer la URI de MongoDB desde Streamlit Secrets
 MONGO_URI = st.secrets["mongo"]["uri"]
-DB_NAME = "enquesta_tfg"
+DB_NAME = "TFG"
 COLLECTION_NAME = "respostes"
 
 # 🔗 Conectar a MongoDB
