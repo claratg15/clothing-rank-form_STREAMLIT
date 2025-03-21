@@ -12,7 +12,7 @@ st.set_page_config(layout="wide")
 IMAGE_FOLDER = "subset_100_images"  # Cambia esto a la ubicación real
 
 # Nombre del archivo en Dropbox donde se guardarán las respuestas
-DATA_FILE = "/encuesta_respuestas.csv"  # Ruta del archivo en Dropbox
+DATA_FILE = "/enquesta_respostes.csv"  # Ruta del archivo en Dropbox
 
 # 🌟 Mantener las mismas imágenes durante la sesión
 if "selected_images" not in st.session_state:
@@ -30,8 +30,8 @@ if "response_saved" not in st.session_state:
     st.session_state.response_saved = False
 
 # Título de la encuesta
-st.title("Encuesta de preferencia de piezas de ropa")
-st.write("**Arrastra las imágenes para ordenarlas según tu preferencia. Las fotografías están abajo.**")
+st.title("Enquesta de preferència de peces de roba")
+st.write("**Arrossega les imatges per ordenar-les segons la teva preferència. Les fotografies es troben a sota del requadre.**")
 
 # 🔢 Crear etiquetas "Imagen 1", "Imagen 2"...
 image_labels = [f"Imagen {i+1}" for i in range(len(image_list))]
@@ -44,7 +44,7 @@ sorted_images = [os.path.join(IMAGE_FOLDER, image_list[image_labels.index(label)
 
 # 📷 Mostrar las imágenes ordenadas solo si la respuesta no ha sido guardada
 if not st.session_state.response_saved:
-    st.write(" **Imágenes según el orden seleccionado:**")
+    st.write(" **Imatges segons l'ordre seleccionat:**")
 
     # Mostrar las imágenes en columnas (5 imágenes por fila)
     cols = st.columns(5)
@@ -65,9 +65,23 @@ def upload_to_dropbox(file_path, dropbox_path, token):
     with open(file_path, "rb") as f:
         dbx.files_upload(f.read(), dropbox_path, mode=dropbox.files.WriteMode.overwrite)
 
+# Función para leer el archivo CSV desde Dropbox
+def download_from_dropbox(dropbox_path, token):
+    dbx = dropbox.Dropbox(token)
+    
+    try:
+        metadata, res = dbx.files_download(dropbox_path)
+        return pd.read_csv(res.content.decode('utf-8'))
+    except dropbox.exceptions.ApiError as err:
+        # Si el archivo no existe, devolver un DataFrame vacío
+        if err.error.is_path() and err.error.get_path().is_conflict():
+            return pd.DataFrame()
+        else:
+            return pd.DataFrame()
+
 # Botón para guardar la respuesta
 if not st.session_state.response_saved:
-    if st.button("Guardar respuesta"):
+    if st.button("Guardar resposta"):
         if sorted_images:
             # Obtener los nombres de las imágenes sin la ruta ni la extensión
             sorted_image_names = [get_image_name(img) for img in sorted_images]
@@ -76,20 +90,26 @@ if not st.session_state.response_saved:
             user_id = len(pd.read_csv(DATA_FILE)) + 1 if os.path.exists(DATA_FILE) else 1  # ID incremental
             df = pd.DataFrame([[user_id] + sorted_image_names], columns=["ID"] + [f"Rank_{i}" for i in range(1, len(sorted_image_names) + 1)])
 
-            # Guardar en un archivo CSV localmente
-            local_file = "responses_temp.csv"
-            df.to_csv(local_file, index=False)
-
             # Obtener el token de acceso de Dropbox desde los secretos de Streamlit
             dropbox_token = st.secrets["dropbox"]["access_token"]
             
-            # Subir el archivo CSV a Dropbox
+            # Intentar descargar el archivo CSV existente desde Dropbox
+            existing_df = download_from_dropbox(DATA_FILE, dropbox_token)
+
+            # Concatenar el nuevo DataFrame con el existente (si existe)
+            final_df = pd.concat([existing_df, df], ignore_index=True)
+
+            # Guardar el DataFrame final en un archivo CSV local
+            local_file = "responses_temp.csv"
+            final_df.to_csv(local_file, index=False)
+
+            # Subir el archivo actualizado a Dropbox
             upload_to_dropbox(local_file, DATA_FILE, dropbox_token)
 
-            st.success("Respuesta guardada correctamente. Muchas gracias por tu participación.")
+            st.success("Resposta guardada correctament. Moltes gràcies per la teva participació!")
 
             # Marcar que la respuesta ha sido guardada y ocultar las imágenes
             st.session_state.response_saved = True
             st.session_state.selected_images = []  # Eliminar las imágenes para evitar que se muestren de nuevo
 else:
-    st.write("¡Ya has respondido la encuesta! Muchas gracias por participar.")
+    st.write("Ja has respost l'enquesta. Moltes gràcies per la teva participació!")
