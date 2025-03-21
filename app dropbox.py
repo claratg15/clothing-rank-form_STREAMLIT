@@ -118,3 +118,4 @@ if not st.session_state.response_saved:
             st.session_state.selected_images = []  # Eliminar las imágenes para evitar que se muestren de nuevo
 else:
     st.write("¡Ya has respondido la encuesta! Muchas gracias por participar.")
+
