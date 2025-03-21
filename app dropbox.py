@@ -73,10 +73,10 @@ def download_from_dropbox(dropbox_path, local_path, token):
         with open(local_path, "wb") as f:
             f.write(res.content)
     except dropbox.exceptions.ApiError as e:
-        if e.error.is_path() and e.error.get_path().is_conflict():
-            st.error("El archivo ya existe en Dropbox.")
+        if isinstance(e.error, dropbox.files.DownloadError):
+            st.warning("El archivo no existe en Dropbox. Se creará uno nuevo.")
         else:
-            st.error(f"Error descargando el archivo: {e}")
+            st.error(f"Error al intentar descargar el archivo desde Dropbox: {e}")
 
 # Botón para guardar la respuesta
 if not st.session_state.response_saved:
@@ -85,11 +85,8 @@ if not st.session_state.response_saved:
             # Obtener los nombres de las imágenes sin la ruta ni la extensión
             sorted_image_names = [get_image_name(img) for img in sorted_images]
 
-            # Crear un ID único para cada usuario
-            user_id = 1  # Establecer un ID estático o usar alguna lógica para generarlo
-
-            # Crear el DataFrame con las respuestas
-            new_data = pd.DataFrame([[user_id] + sorted_image_names], columns=["ID"] + [f"Rank_{i}" for i in range(1, len(sorted_image_names) + 1)])
+            # Crear el DataFrame sin la columna ID
+            new_data = pd.DataFrame([sorted_image_names], columns=[f"Rank_{i}" for i in range(1, len(sorted_image_names) + 1)])
 
             # Obtener el token de acceso de Dropbox desde los secretos de Streamlit
             dropbox_token = st.secrets["dropbox"]["access_token"]
@@ -118,4 +115,3 @@ if not st.session_state.response_saved:
             st.session_state.selected_images = []  # Eliminar las imágenes para evitar que se muestren de nuevo
 else:
     st.write("¡Ya has respondido la encuesta! Muchas gracias por participar.")
-
