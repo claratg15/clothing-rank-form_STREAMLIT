@@ -85,11 +85,8 @@ if not st.session_state.response_saved:
             # Obtener los nombres de las imágenes sin la ruta ni la extensión
             sorted_image_names = [get_image_name(img) for img in sorted_images]
 
-            # Crear un ID único para cada usuario
-            user_id = 1  # Establecer un ID estático o usar alguna lógica para generarlo
-
-            # Crear el DataFrame con las respuestas
-            new_data = pd.DataFrame([[user_id] + sorted_image_names], columns=["ID"] + [f"Rank_{i}" for i in range(1, len(sorted_image_names) + 1)])
+            # Crear el DataFrame sin la columna ID
+            new_data = pd.DataFrame([sorted_image_names], columns=[f"Rank_{i}" for i in range(1, len(sorted_image_names) + 1)])
 
             # Obtener el token de acceso de Dropbox desde los secretos de Streamlit
             dropbox_token = st.secrets["dropbox"]["access_token"]
@@ -118,5 +115,3 @@ if not st.session_state.response_saved:
             st.session_state.selected_images = []  # Eliminar las imágenes para evitar que se muestren de nuevo
 else:
     st.write("¡Ya has respondido la encuesta! Muchas gracias por participar.")
-
-
