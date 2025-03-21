@@ -1,6 +1,5 @@
-import streamlit as st
 import os
-import random
+import streamlit as st
 import pandas as pd
 import dropbox
 from streamlit_sortables import sort_items
@@ -104,7 +103,7 @@ if not st.session_state.response_saved:
             # Concatenar el nuevo DataFrame con el existente (si existe)
             final_df = pd.concat([existing_df, df], ignore_index=True)
 
-            # Guardar el DataFrame final en un archivo CSV local
+            # Guardar el DataFrame final en un archivo CSV local temporal (para verificación si es necesario)
             local_file = "responses_temp.csv"
             final_df.to_csv(local_file, index=False)
 
@@ -118,3 +117,4 @@ if not st.session_state.response_saved:
             st.session_state.selected_images = []  # Eliminar las imágenes para evitar que se muestren de nuevo
 else:
     st.write("¡Ya has respondido la encuesta! Muchas gracias por participar.")
+
