@@ -73,10 +73,10 @@ def download_from_dropbox(dropbox_path, local_path, token):
         with open(local_path, "wb") as f:
             f.write(res.content)
     except dropbox.exceptions.ApiError as e:
+        # Eliminar la línea de advertencia
         if isinstance(e.error, dropbox.files.DownloadError):
-            st.warning("El archivo no existe en Dropbox. Se creará uno nuevo.")
-        else:
-            st.error(f"Error al intentar descargar el archivo desde Dropbox: {e}")
+            pass  # No hacemos nada si el archivo no existe, no mostramos advertencia
+
 
 # Botón para guardar la respuesta
 if not st.session_state.response_saved:
