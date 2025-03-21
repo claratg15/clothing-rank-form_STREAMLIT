@@ -101,5 +101,3 @@ if st.session_state.response_saved:
             mime="text/csv"
         )
 
-else:
-    st.write("Ja has respost l'enquesta. Moltes gràcies per participar!")
