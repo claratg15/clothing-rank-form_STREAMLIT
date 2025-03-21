@@ -85,7 +85,10 @@ if not st.session_state.response_saved:
             # Obtener los nombres de las imágenes sin la ruta ni la extensión
             sorted_image_names = [get_image_name(img) for img in sorted_images]
 
-            # Crear el DataFrame sin la columna ID
+            # Crear un ID único para cada usuario
+            user_id = 1  # Establecer un ID estático o usar alguna lógica para generarlo
+
+            # Crear el DataFrame con las respuestas
             new_data = pd.DataFrame([sorted_image_names], columns=[f"Rank_{i}" for i in range(1, len(sorted_image_names) + 1)])
 
             # Obtener el token de acceso de Dropbox desde los secretos de Streamlit
