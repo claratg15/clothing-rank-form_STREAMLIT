@@ -53,9 +53,11 @@ def download_from_dropbox(dropbox_path, local_path):
 
 # Carpeta on estan les fotos
 IMAGE_FOLDER = "subset_100_images" 
+
+# Nom de l'arxiu de Dropbox on guardarem les respostes
 DATA_FILE = "/respostes.csv" 
 
-# Selecció d'imatges
+# Mantenim les mateixes imatges durant la sessió
 if "selected_images" not in st.session_state:
     def get_random_images(folder, n=10):
         images = [f for f in os.listdir(folder) if f.endswith(('.png', '.jpg', '.jpeg'))]
@@ -63,32 +65,49 @@ if "selected_images" not in st.session_state:
 
     st.session_state.selected_images = get_random_images(IMAGE_FOLDER)
 
+# Llista de les imatges seleccionades
 image_list = st.session_state.selected_images
+
+# Marca si la resposta ha estat guardada, per evitar noves respostes
 if "response_saved" not in st.session_state:
     st.session_state.response_saved = False
 
-# Enquesta
+# Títol de l'enquesta
 st.title("Enquesta de preferència de peces de roba")
-st.write("**Ordena les imatges segons la teva preferència.**")
 
 genere = st.selectbox("Gènere", ["Home", "Dona", "No Binari", "Altres"])
 edat = st.number_input("Edat", min_value=10, max_value=100, step=1)
-compra_mode = st.radio("Preferència de compra", ["Online", "Físicament en botiga"])
+compra_mode = st.radio("Com prefereixes comprar articles de roba: de manera online o físicament en botiga?", ["Online", "Físicament en botiga"])
 
 # Ordenar imatges
+st.write("**Arrossega les etiquetes de les imatges per ordenar-les segons la teva preferència. Les fotografies es troben a sota del requadre.**")
+
+# Creem etiquetes ("Imagen 1", "Imagen 2"...)
 image_labels = [f"Imagen {i+1}" for i in range(len(image_list))]
+
+# Ordenem les imatges (mostrant només els noms als elements ordenables)
 sorted_filenames = sort_items(image_labels, direction="vertical")
+
+# Reordenem les imatges en funció de l'ordre de les etiquetes
 sorted_images = [os.path.join(IMAGE_FOLDER, image_list[image_labels.index(label)]) for label in sorted_filenames]
 
+# Mostrem les imatges ordenades només si la resposta no ha estat guardada
 if not st.session_state.response_saved:
+    st.write(" **Imatges segons l'ordre seleccionat:**")
+    
+    # Mostrar les imatges en columnes (5 fotos per fila)
     cols = st.columns(5)
+
     for i, img in enumerate(sorted_images):
         with cols[i % 5]:  
+            st.write(f"**{sorted_filenames[i]}**")  
             st.image(img, use_container_width=True)  
 
+# Agafem només el nom de la foto, sense l'extensió .jpg
 def get_image_name(image_path):
     return os.path.splitext(os.path.basename(image_path))[0]
 
+# Botó per guardar la resposta
 if not st.session_state.response_saved:
     if st.button("Enviar resposta"):
         if sorted_images:
@@ -108,8 +127,8 @@ if not st.session_state.response_saved:
             df.to_csv(local_file, index=False)
             upload_to_dropbox(local_file, DATA_FILE)
 
-            st.success("Resposta enviada correctament!")
+            st.success("Resposta enviada correctament. Moltes gràcies per la teva participació!")
             st.session_state.response_saved = True
             st.session_state.selected_images = []  
 else:
-    st.write("Ja has respost l'enquesta. Moltes gràcies!")
+    st.write("Ja has respost l'enquesta. Moltes gràcies per la teva participació!")
