@@ -76,14 +76,14 @@ if "response_saved" not in st.session_state:
 st.title("Enquesta de preferència de peces de roba")
 
 genere = st.selectbox("Gènere", ["Home", "Dona", "No Binari", "Altres"])
-edat = st.number_input("Edat", min_value=10, max_value=100, step=1)
+edat = st.number_input("Edat", min_value=1, max_value=100, step=1)
 compra_mode = st.radio("Com prefereixes comprar articles de roba: de manera online o físicament en botiga?", ["Online", "Físicament en botiga"])
 
 # Ordenar imatges
 st.write("**Arrossega les etiquetes de les imatges per ordenar-les segons la teva preferència. Les fotografies es troben a sota del requadre.**")
 
 # Creem etiquetes ("Imagen 1", "Imagen 2"...)
-image_labels = [f"Imagen {i+1}" for i in range(len(image_list))]
+image_labels = [f"Imatge {i+1}" for i in range(len(image_list))]
 
 # Ordenem les imatges (mostrant només els noms als elements ordenables)
 sorted_filenames = sort_items(image_labels, direction="vertical")
