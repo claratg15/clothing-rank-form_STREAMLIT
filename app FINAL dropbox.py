@@ -82,7 +82,7 @@ compra_mode = st.selectbox("Com prefereixes comprar articles de roba: de manera 
 #compra_mode = st.radio("Com prefereixes comprar articles de roba: de manera online o físicament en botiga?", ["Online", "Físicament en botiga", "Ambdues opcions per igual"])
 
 # Ordenar imatges
-st.write("**A sota tens una columna que indica la posició del rànquing, i una columna amb les etiquetes de les imatges en vermell. Les fotografies es troben a sota d'aquestes dues columnes.")
+st.write("**A sota tens una columna que indica la posició del rànquing, i una columna amb les etiquetes de les imatges en vermell. Les fotografies es troben a sota d'aquestes dues columnes.**")
 st.write("**Arrossega les etiquetes de les imatges per ordenar-les segons la teva preferència. Les fotografies s'aniran reordenant segons l'ordre en què les hagis classificat.**")
 
 # Creem etiquetes ("Imagen 1", "Imagen 2"...)
@@ -104,6 +104,15 @@ with col2:
 
 with col3:
     st.write("<u>Ordena les imatges segons la teva preferència:</u>", unsafe_allow_html=True)
+    st.markdown("""
+    <style>
+        .stSortableItem {
+            margin-bottom: 20px;  /* Augmenta l'espai entre cada element */
+            padding: 10px;        /* Augmenta l'espai dins de cada etiqueta */
+            font-size: 18px;      /* Opcional: augmenta la mida de la font */
+        }
+    </style>
+""", unsafe_allow_html=True)
     sorted_filenames = sort_items(image_labels, direction="vertical")
 
 
