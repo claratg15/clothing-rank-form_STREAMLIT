@@ -105,7 +105,7 @@ st.markdown("""
     <style>
         .sortable-item {
             margin-bottom: 15px;  /* Afegeix més espai entre les files */
-            padding: 10px;        /* Ajusta la distància interna entre les etiquetes */
+            padding: 12px;        /* Ajusta la distància interna entre les etiquetes */
         }
     </style>
 """, unsafe_allow_html=True)
