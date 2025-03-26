@@ -88,7 +88,17 @@ st.write("**Arrossega les etiquetes de les imatges per ordenar-les segons la tev
 image_labels = [f"Imatge {i+1}" for i in range(len(image_list))]
 
 # Ordenem les imatges (mostrant només els noms als elements ordenables)
-sorted_filenames = sort_items(image_labels, direction="vertical")
+# sorted_filenames = sort_items(image_labels, direction="vertical")
+
+# !! nou
+# Afegim el número fix davant de cada etiqueta, però només per mostrar-lo
+display_labels = [f"#{i+1} {label}" for i, label in enumerate(image_labels)]
+
+# Ordenem les imatges (mostrant només els noms als elements ordenables)
+sorted_display = sort_items(display_labels, direction="vertical")
+
+# Eliminem el número per recuperar el nom original abans de buscar la imatge
+sorted_filenames = [" ".join(label.split(" ")[1:]) for label in sorted_display]
 
 # Reordenem les imatges en funció de l'ordre de les etiquetes
 sorted_images = [os.path.join(IMAGE_FOLDER, image_list[image_labels.index(label)]) for label in sorted_filenames]
