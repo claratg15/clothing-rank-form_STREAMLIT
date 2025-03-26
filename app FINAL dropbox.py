@@ -85,8 +85,8 @@ compra_mode = st.selectbox("Com prefereixes comprar articles de roba: de manera 
 
 # Ordenar imatges
 st.subheader("**Segona part: Rànquing d'articles de roba**")
-st.write("**A sota tens dues columnes: la primera indica la posició del rànquing, i la segona conté les etiquetes de les imatges en vermell. Les fotografies es troben a sota d'aquestes dues columnes.** "
-"**Arrossega les etiquetes de les imatges per ordenar-les segons la teva preferència. Les fotografies s'aniran reordenant segons l'ordre en què les hagis classificat.**")
+st.write("A sota tens dues columnes: la primera indica la posició del rànquing, i la segona conté les etiquetes de les imatges en vermell. Les fotografies es troben a sota d'aquestes dues columnes. "
+"Arrossega les etiquetes de les imatges per ordenar-les segons la teva preferència. Les fotografies s'aniran reordenant segons l'ordre en què les hagis classificat.")
 
 # Creem etiquetes ("Imagen 1", "Imagen 2"...)
 image_labels = [f"Imatge {i+1}" for i in range(len(image_list))]
