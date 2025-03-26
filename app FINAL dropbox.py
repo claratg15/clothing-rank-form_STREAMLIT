@@ -107,8 +107,8 @@ with col3:
     st.markdown("""
         <style>
             .sortable-item {
-                margin-bottom: 20px;  /* Afegeix més espai entre les files */
-                padding: 12px;        /* Ajusta la distància interna entre les etiquetes */
+                margin-bottom: 13px;  /* Afegeix més espai entre les files */
+                padding: 13px;        /* Ajusta la distància interna entre les etiquetes */
             }
         </style>
     """, unsafe_allow_html=True)
