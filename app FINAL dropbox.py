@@ -92,18 +92,19 @@ image_labels = [f"Imatge {i+1}" for i in range(len(image_list))]
 
 # !! nou
 # Crear la disposició amb dues columnes: una per al número i una per a l'etiqueta ordenable
-col1, col2 = st.columns([0.3, 0.4])  # La primera columna és més estreta per als números
+col1, col2, col3 = st.columns([0.3, 0.3, 0.6])  # La primera columna és més estreta per als números
 
 with col1:
-    st.write("<u>Rànquing</u>")
+    st.write("<u>Rànquing</u>", unsafe_allow_html=True)
     for i in range(len(image_labels)):
-        st.markdown(f"<p style='text-align: right;'>Posició {i+1}:</p>", 
+        st.markdown(f"<p style='text-align: left;'>Posició {i+1}:</p>", 
                     unsafe_allow_html=True)
 #        st.write(f"**Posició {i+1}**")  # Els números es mostren fixes
 
 with col2:
-    st.write("<u>Ordena les imatges segons la teva preferència:</u>")
+    st.write("<u>Ordena les imatges segons la teva preferència:</u>", unsafe_allow_html=True)
     sorted_filenames = sort_items(image_labels, direction="vertical")
+
 
 
 
