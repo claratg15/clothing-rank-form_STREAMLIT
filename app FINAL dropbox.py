@@ -91,14 +91,19 @@ image_labels = [f"Imatge {i+1}" for i in range(len(image_list))]
 # sorted_filenames = sort_items(image_labels, direction="vertical")
 
 # !! nou
-# Afegim el número fix davant de cada etiqueta, però només per mostrar-lo
-display_labels = [f"#{i+1} {label}" for i, label in enumerate(image_labels)]
+# Crear la disposició amb dues columnes: una per al número i una per a l'etiqueta ordenable
+col1, col2 = st.columns([0.2, 0.8])  # La primera columna és més estreta per als números
 
-# Ordenem les imatges (mostrant només els noms als elements ordenables)
-sorted_display = sort_items(display_labels, direction="vertical")
+with col1:
+    st.write("**Rànquing**")
+    for i in range(len(image_labels)):
+        st.write(f"**#{i+1}**")  # Els números es mostren fixes
 
-# Eliminem el número per recuperar el nom original abans de buscar la imatge
-sorted_filenames = [" ".join(label.split(" ")[1:]) for label in sorted_display]
+with col2:
+    st.write("**Ordena les imatges segons la teva preferència:**")
+    sorted_filenames = sort_items(image_labels, direction="vertical")
+
+
 
 # Reordenem les imatges en funció de l'ordre de les etiquetes
 sorted_images = [os.path.join(IMAGE_FOLDER, image_list[image_labels.index(label)]) for label in sorted_filenames]
