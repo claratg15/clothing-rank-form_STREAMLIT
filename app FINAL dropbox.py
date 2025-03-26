@@ -102,15 +102,14 @@ with col2:
 #        st.write(f"**Posició {i+1}**")  # Els números es mostren fixes
 
 with col3:
+    st.write("<u>Ordena les imatges segons la teva preferència:</u>", unsafe_allow_html=True)
     st.markdown("""
         <style>
             .sortable-item {
-                margin-bottom: 5px;  /* Afegeix més espai entre les files */
                 padding: 15px;        /* Ajusta la distància interna entre les etiquetes */
             }
         </style>
     """, unsafe_allow_html=True)
-    st.write("<u>Ordena les imatges segons la teva preferència:</u>", unsafe_allow_html=True)
     sorted_filenames = sort_items(image_labels, direction="vertical")
 
 
