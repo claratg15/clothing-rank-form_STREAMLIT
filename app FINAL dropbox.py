@@ -87,29 +87,8 @@ st.write("**Arrossega les etiquetes de les imatges per ordenar-les segons la tev
 # Creem etiquetes ("Imagen 1", "Imagen 2"...)
 image_labels = [f"Imatge {i+1}" for i in range(len(image_list))]
 
-# !! nou
-# Creem etiquetes numerades fixament ("#1 Imatge 1", "#2 Imatge 2", ...)
-numbered_labels = [f"#{i+1} {image_labels[i]}" for i in range(len(image_list))]
-
-# Dividim les etiquetes en dues columnes (5 per cada columna)
-left_labels = numbered_labels[:len(numbered_labels)//2]
-right_labels = numbered_labels[len(numbered_labels)//2:]
-
-# Creem les dues columnes per ordenar
-col1, col2 = st.columns(2)
-
-# L'usuari ordena les imatges en dues columnes separades
-with col1:
-    sorted_left = sort_items(left_labels, direction="vertical")
-with col2:
-    sorted_right = sort_items(right_labels, direction="vertical")
-
-# Unim els dos llistats ordenats
-sorted_filenames = sorted_left + sorted_right
-
-
 # Ordenem les imatges (mostrant només els noms als elements ordenables)
-# sorted_filenames = sort_items(image_labels, direction="vertical")
+sorted_filenames = sort_items(image_labels, direction="vertical")
 
 # Reordenem les imatges en funció de l'ordre de les etiquetes
 sorted_images = [os.path.join(IMAGE_FOLDER, image_list[image_labels.index(label)]) for label in sorted_filenames]
