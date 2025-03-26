@@ -74,16 +74,19 @@ if "response_saved" not in st.session_state:
 
 # Títol de l'enquesta
 st.title("Enquesta de preferència de peces de roba")
-st.write("**Si has obert l'enquesta amb el telèfon mòbil, desactiva la rotació i gira el mòbil en horitzontal per a veure bé les imatges que trobaràs més endavant.**")
+st.markdown("<h3 style='color: blue;'>i has obert l'enquesta amb el telèfon mòbil, desactiva la rotació i gira el mòbil en horitzontal per a veure bé les imatges que trobaràs més endavant.</h3>", unsafe_allow_html=True)
+#st.write("**Si has obert l'enquesta amb el telèfon mòbil, desactiva la rotació i gira el mòbil en horitzontal per a veure bé les imatges que trobaràs més endavant.**")
 
+st.subheader("**Primera part: Preguntes demogràfiques")
 genere = st.selectbox("Gènere", ["Home", "Dona", "Altres"])
 edat = st.number_input("Edat", min_value=1, max_value=100, step=1)
 compra_mode = st.selectbox("Com prefereixes comprar articles de roba: de manera online o físicament en botiga?", ["Online", "Físicament en botiga", "Ambdues opcions per igual"])
 #compra_mode = st.radio("Com prefereixes comprar articles de roba: de manera online o físicament en botiga?", ["Online", "Físicament en botiga", "Ambdues opcions per igual"])
 
 # Ordenar imatges
-st.write("**A sota tens una columna que indica la posició del rànquing, i una columna amb les etiquetes de les imatges en vermell. Les fotografies es troben a sota d'aquestes dues columnes.**")
-st.write("**Arrossega les etiquetes de les imatges per ordenar-les segons la teva preferència. Les fotografies s'aniran reordenant segons l'ordre en què les hagis classificat.**")
+st.subheader("**Segona part: Rànquing d'articles de roba")
+st.write("**A sota tens una columna que indica la posició del rànquing, i una columna amb les etiquetes de les imatges en vermell. Les fotografies es troben a sota d'aquestes dues columnes. "
+"**Arrossega les etiquetes de les imatges per ordenar-les segons la teva preferència. Les fotografies s'aniran reordenant segons l'ordre en què les hagis classificat.**")
 
 # Creem etiquetes ("Imagen 1", "Imagen 2"...)
 image_labels = [f"Imatge {i+1}" for i in range(len(image_list))]
@@ -107,7 +110,6 @@ with col3:
     st.markdown("""
     <style>
         .stSortableItem {
-            margin-bottom: 20px;  /* Augmenta l'espai entre cada element */
             padding: 10px;        /* Augmenta l'espai dins de cada etiqueta */
             font-size: 18px;      /* Opcional: augmenta la mida de la font */
         }
