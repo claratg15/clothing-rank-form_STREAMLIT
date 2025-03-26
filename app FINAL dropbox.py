@@ -74,7 +74,7 @@ if "response_saved" not in st.session_state:
 
 # Títol de l'enquesta
 st.title("Enquesta de preferència de peces de roba")
-st.write("**Si has obert l'enquesta amb el telèfon mòbil, desactiva la rotació i gira el mòbil en horitzontal per a veure bé les imatges.**")
+st.write("**Si has obert l'enquesta amb el telèfon mòbil, desactiva la rotació i gira el mòbil en horitzontal per a veure bé les imatges que trobaràs més endavant.**")
 
 genere = st.selectbox("Gènere", ["Home", "Dona", "Altres"])
 edat = st.number_input("Edat", min_value=1, max_value=100, step=1)
@@ -82,8 +82,8 @@ compra_mode = st.selectbox("Com prefereixes comprar articles de roba: de manera 
 #compra_mode = st.radio("Com prefereixes comprar articles de roba: de manera online o físicament en botiga?", ["Online", "Físicament en botiga", "Ambdues opcions per igual"])
 
 # Ordenar imatges
-st.write("**A sota tens una columna que indica la posició del rànquing, i una columna amb les etiquetes de les imatges en vermell. Les fotografies es troben a sota d'aquestes dues columnes."
-"Arrossega les etiquetes de les imatges per ordenar-les segons la teva preferència. Les fotografies s'aniran reordenant segons l'ordre en què les hagis classificat.**")
+st.write("**A sota tens una columna que indica la posició del rànquing, i una columna amb les etiquetes de les imatges en vermell. Les fotografies es troben a sota d'aquestes dues columnes.")
+st.write("**Arrossega les etiquetes de les imatges per ordenar-les segons la teva preferència. Les fotografies s'aniran reordenant segons l'ordre en què les hagis classificat.**")
 
 # Creem etiquetes ("Imagen 1", "Imagen 2"...)
 image_labels = [f"Imatge {i+1}" for i in range(len(image_list))]
@@ -104,13 +104,6 @@ with col2:
 
 with col3:
     st.write("<u>Ordena les imatges segons la teva preferència:</u>", unsafe_allow_html=True)
-    st.markdown("""
-        <style>
-            .stSortableItem {
-                margin-bottom: 20px;       
-            }
-        </style>
-    """, unsafe_allow_html=True)
     sorted_filenames = sort_items(image_labels, direction="vertical")
 
 
