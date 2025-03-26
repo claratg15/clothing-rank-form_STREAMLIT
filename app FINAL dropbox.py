@@ -74,10 +74,12 @@ if "response_saved" not in st.session_state:
 
 # Títol de l'enquesta
 st.title("Enquesta de preferència de peces de roba")
+st.write("Si has obert l'enquesta amb el telèfon mòbil, desactiva la rotació i gira el mòbil en horitzontal per a veure bé les imatges.")
 
-genere = st.selectbox("Gènere", ["Home", "Dona", "No Binari", "Altres"])
+genere = st.selectbox("Gènere", ["Home", "Dona", "Altres"])
 edat = st.number_input("Edat", min_value=1, max_value=100, step=1)
-compra_mode = st.radio("Com prefereixes comprar articles de roba: de manera online o físicament en botiga?", ["Online", "Físicament en botiga"])
+compra_mode = st.selectbox("Com prefereixes comprar articles de roba: de manera online o físicament en botiga?", ["Online", "Físicament en botiga", "Ambdues opcions per igual"])
+#compra_mode = st.radio("Com prefereixes comprar articles de roba: de manera online o físicament en botiga?", ["Online", "Físicament en botiga", "Ambdues opcions per igual"])
 
 # Ordenar imatges
 st.write("**Arrossega les etiquetes de les imatges per ordenar-les segons la teva preferència. Les fotografies es troben a sota del requadre.**")
@@ -85,8 +87,29 @@ st.write("**Arrossega les etiquetes de les imatges per ordenar-les segons la tev
 # Creem etiquetes ("Imagen 1", "Imagen 2"...)
 image_labels = [f"Imatge {i+1}" for i in range(len(image_list))]
 
+# !! nou
+# Creem etiquetes numerades fixament ("#1 Imatge 1", "#2 Imatge 2", ...)
+numbered_labels = [f"#{i+1} {image_labels[i]}" for i in range(len(image_list))]
+
+# Dividim les etiquetes en dues columnes (5 per cada columna)
+left_labels = numbered_labels[:len(numbered_labels)//2]
+right_labels = numbered_labels[len(numbered_labels)//2:]
+
+# Creem les dues columnes per ordenar
+col1, col2 = st.columns(2)
+
+# L'usuari ordena les imatges en dues columnes separades
+with col1:
+    sorted_left = sort_items(left_labels, direction="vertical")
+with col2:
+    sorted_right = sort_items(right_labels, direction="vertical")
+
+# Unim els dos llistats ordenats
+sorted_filenames = sorted_left + sorted_right
+
+
 # Ordenem les imatges (mostrant només els noms als elements ordenables)
-sorted_filenames = sort_items(image_labels, direction="vertical")
+# sorted_filenames = sort_items(image_labels, direction="vertical")
 
 # Reordenem les imatges en funció de l'ordre de les etiquetes
 sorted_images = [os.path.join(IMAGE_FOLDER, image_list[image_labels.index(label)]) for label in sorted_filenames]
@@ -98,10 +121,18 @@ if not st.session_state.response_saved:
     # Mostrar les imatges en columnes (5 fotos per fila)
     cols = st.columns(5)
 
-    for i, img in enumerate(sorted_images):
+    # !! nou:
+    for i, label in enumerate(sorted_filenames):  # Iterem sobre els noms ordenats
+        img_path = os.path.join(IMAGE_FOLDER, image_list[image_labels.index(label)])  # Busquem la imatge corresponent
+        
         with cols[i % 5]:  
-            st.write(f"**{sorted_filenames[i]}**")  
-            st.image(img, use_container_width=True)  
+            st.write(f"**{i+1}. {label}**")  # Mostrem el número fix + etiqueta de la imatge
+            st.image(img_path, use_container_width=True)
+
+    #for i, img in enumerate(sorted_images):
+    #    with cols[i % 5]:  
+    #        st.write(f"**{sorted_filenames[i]}**")  
+    #        st.image(img, use_container_width=True)  
 
 # Agafem només el nom de la foto, sense l'extensió .jpg
 def get_image_name(image_path):
