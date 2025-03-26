@@ -92,12 +92,14 @@ image_labels = [f"Imatge {i+1}" for i in range(len(image_list))]
 
 # !! nou
 # Crear la disposició amb dues columnes: una per al número i una per a l'etiqueta ordenable
-col1, col2 = st.columns([0.3, 0.5])  # La primera columna és més estreta per als números
+col1, col2 = st.columns([0.3, 0.4])  # La primera columna és més estreta per als números
 
 with col1:
     st.write("**Rànquing**")
     for i in range(len(image_labels)):
-        st.write(f"**Posició {i+1}**")  # Els números es mostren fixes
+        st.markdown(f"<p style='text-align: left; font-weight: bold;'>Posició {i+1}:</p>", 
+                    unsafe_allow_html=True)
+#        st.write(f"**Posició {i+1}**")  # Els números es mostren fixes
 
 with col2:
     st.write("**Ordena les imatges segons la teva preferència:**")
@@ -120,7 +122,7 @@ if not st.session_state.response_saved:
         img_path = os.path.join(IMAGE_FOLDER, image_list[image_labels.index(label)])  # Busquem la imatge corresponent
         
         with cols[i % 5]:  
-            st.write(f"**Posició {i+1}. {label}**")  # Mostrem el número fix + etiqueta de la imatge
+            st.write(f"**Posició {i+1}:** {label}")  # Mostrem el número fix + etiqueta de la imatge
             st.image(img_path, use_container_width=True)
 
     #for i, img in enumerate(sorted_images):
