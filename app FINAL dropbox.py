@@ -97,7 +97,7 @@ image_labels = [f"Imatge {i+1}" for i in range(len(image_list))]
 
 # !! nou
 # Crear la disposició amb dues columnes: una per al número i una per a l'etiqueta ordenable
-col1, col2, col3, col4 = st.columns([0.3, 0.2, 0.6, 0.2])  # La primera columna és més estreta per als números
+col1, col2, col3, col4 = st.columns([0.3, 0.2, 0.5, 0.2])  # La primera columna és més estreta per als números
 
 with col2:
     st.write("<u>Rànquing</u>", unsafe_allow_html=True)
