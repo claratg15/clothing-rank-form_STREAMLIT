@@ -104,7 +104,7 @@ with col2:
 st.markdown("""
     <style>
         .sortable-item {
-            margin-bottom: 15px;  /* Afegeix més espai entre les files */
+            margin-bottom: 20px;  /* Afegeix més espai entre les files */
             padding: 12px;        /* Ajusta la distància interna entre les etiquetes */
         }
     </style>
