@@ -107,14 +107,6 @@ with col2:
 
 with col3:
     st.write("<u>Ordena les imatges segons la teva preferència:</u>", unsafe_allow_html=True)
-    st.markdown("""
-    <style>
-        .stSortableItem {
-            padding: 10px;        /* Augmenta l'espai dins de cada etiqueta */
-            font-size: 18px;      /* Opcional: augmenta la mida de la font */
-        }
-    </style>
-""", unsafe_allow_html=True)
     sorted_filenames = sort_items(image_labels, direction="vertical")
 
 
