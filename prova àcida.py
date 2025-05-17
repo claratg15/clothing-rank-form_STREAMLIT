@@ -239,7 +239,7 @@ cos_sim_matrix = pd.DataFrame(cos_sim_matrix, index=image_names, columns=image_n
 
 # --- Load and Prepare Data ---
 # Load existing responses (respostes.csv)
-responses = pd.read_csv("responses_temp.csv")
+responses = pd.read_csv("respostes.csv")
 
 # Assign user ID to each row (1-based indexing)
 responses['usuari'] = range(1, len(responses) + 1)
