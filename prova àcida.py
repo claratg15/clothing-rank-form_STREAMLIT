@@ -350,7 +350,7 @@ def predict_for_test(train, test, similitud_usuaris, k):
         if len(top_usuaris) < 3:
             continue
         
-        valoracions_top = train[train['imatge'] == img][train['usuari'].isin(top_usuaris['usuari']black)
+        valoracions_top = train[train['imatge'] == img][train['usuari'].isin(top_usuaris['usuari'])]
         top_usuaris = top_usuaris.merge(valoracions_top[['usuari', 'rànquing']], on='usuari')
         
         pred = np.sum(top_usuaris['similitud'] * top_usuaris['rànquing']) / np.sum(top_usuaris['similitud'])
