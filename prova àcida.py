@@ -260,11 +260,8 @@ usuari_escollit = new_data
 valoracions_tidy = valoracions.melt(
     id_vars=['usuari', 'Home', 'Dona', 'Altres', 'Edat', 'Físicament en botiga', 'Online', 'Ambdues opcions'],
     var_name='imatge',
-    value_name='imatge'
+    value_name='rànquing'
 )
-
-# Assign ranking values (1 to 10 based on position)
-valoracions_tidy['rànquing'] = valoracions_tidy['rank_col'].str.extract(r'(\d+)').astype(int)
 
 # --- Normalize Data ---
 scaler = StandardScaler()
