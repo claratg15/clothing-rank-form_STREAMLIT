@@ -3,4 +3,7 @@ pymongo
 pandas
 streamlit-sortables
 dropbox
-
+numpy
+tensorflow
+pillow
+requests
