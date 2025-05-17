@@ -138,31 +138,38 @@ if not st.session_state.response_saved:
 def get_image_name(image_path):
     return os.path.splitext(os.path.basename(image_path))[0]
 
-# Botó per guardar la resposta
-if not st.session_state.response_saved:
-    if st.button("Enviar resposta"):
-        if sorted_images:
-            sorted_image_names = [get_image_name(img) for img in sorted_images]
-            new_data = pd.DataFrame([[genere, edat, compra_mode] + sorted_image_names], 
-                                    columns=["Gènere", "Edat", "Compra"] + [f"Rank_{i}" for i in range(1, len(sorted_image_names) + 1)])
 
-            local_file = "responses_temp.csv"
-            download_from_dropbox(DATA_FILE, local_file)
+sorted_image_names = [get_image_name(img) for img in sorted_images]
+new_data = pd.DataFrame([[genere, edat, compra_mode] + sorted_image_names], 
+columns=["Gènere", "Edat", "Compra"] + [f"Rank_{i}" for i in range(1, len(sorted_image_names) + 1)])
 
-            if os.path.exists(local_file):
-                df = pd.read_csv(local_file)
-                df = pd.concat([df, new_data], ignore_index=True)
-            else:
-                df = new_data  
 
-            df.to_csv(local_file, index=False)
-            upload_to_dropbox(local_file, DATA_FILE)
 
-            st.success("Resposta enviada correctament. Moltes gràcies per la teva participació!")
-            st.session_state.response_saved = True
-            st.session_state.selected_images = []  
-else:
-    st.write("Ja has respost l'enquesta. Moltes gràcies per la teva participació!")
+# # Botó per guardar la resposta
+# #if not st.session_state.response_saved:
+# if st.button("Enviar resposta"):
+#     if sorted_images:
+#         sorted_image_names = [get_image_name(img) for img in sorted_images]
+#         new_data = pd.DataFrame([[genere, edat, compra_mode] + sorted_image_names], 
+#                                 columns=["Gènere", "Edat", "Compra"] + [f"Rank_{i}" for i in range(1, len(sorted_image_names) + 1)])
+
+#         local_file = "responses_temp.csv"
+#         download_from_dropbox(DATA_FILE, local_file)
+
+#         if os.path.exists(local_file):
+#             df = pd.read_csv(local_file)
+#             df = pd.concat([df, new_data], ignore_index=True)
+#         else:
+#             df = new_data  
+
+#         df.to_csv(local_file, index=False)
+#         upload_to_dropbox(local_file, DATA_FILE)
+
+#         st.success("Resposta enviada correctament. Moltes gràcies per la teva participació!")
+#        # st.session_state.response_saved = True
+#         st.session_state.selected_images = []  
+# #else:
+# #    st.write("Ja has respost l'enquesta. Moltes gràcies per la teva participació!")
 
 
 
@@ -237,30 +244,19 @@ cos_sim_matrix = cosine_similarity_matrix(image_features)
 image_names = [os.path.splitext(os.path.basename(p))[0] for p in image_paths]
 cos_sim_matrix = pd.DataFrame(cos_sim_matrix, index=image_names, columns=image_names)
 
-# --- Load and Prepare Data ---
-# Load existing responses (respostes.csv)
-responses = pd.read_csv("respostes.csv")
 
-# Assign user ID to each row (1-based indexing)
-responses['usuari'] = range(1, len(responses) + 1)
+# --- Load and Prepare Data ---
+valoracions = pd.read_csv("valoracions.csv")
 
 # Set usuari_escollit as the last user (from new_data)
-usuari_escollit = responses['usuari'].max()  # Last row corresponds to new_data
+usuari_escollit = new_data
 
-# Prepare demographic columns
-responses['Home'] = (responses['Gènere'] == 'Home').astype(int)
-responses['Dona'] = (responses['Gènere'] == 'Dona').astype(int)
-responses['Altres'] = (responses['Gènere'] == 'Altres').astype(int)
-responses['Físicament en botiga'] = (responses['Compra'] == 'Físicament en botiga').astype(int)
-responses['Online'] = (responses['Compra'] == 'Online').astype(int)
-responses['Ambdues opcions'] = (responses['Compra'] == 'Ambdues opcions per igual').astype(int)
+# demografics = valoracions[[
+#     "usuari", "Home", "Dona", "Altres", "Edat", 
+#     "Físicament en botiga", "Online", "Ambdues opcions"
+# ]]
 
-# Rename ranking columns to image names without extensions
-rank_cols = [f"Rank_{i}" for i in range(1, 11)]
-responses[rank_cols] = responses[rank_cols].apply(lambda x: [os.path.splitext(os.path.basename(img))[0] for img in x])
 
-# Tidy ratings data
-valoracions = responses[['usuari', 'Home', 'Dona', 'Altres', 'Edat', 'Físicament en botiga', 'Online', 'Ambdues opcions'] + rank_cols]
 valoracions_tidy = valoracions.melt(
     id_vars=['usuari', 'Home', 'Dona', 'Altres', 'Edat', 'Físicament en botiga', 'Online', 'Ambdues opcions'],
     value_vars=rank_cols,
@@ -276,12 +272,7 @@ scaler = StandardScaler()
 valoracions_tidy['rànquing'] = valoracions_tidy.groupby('usuari')['rànquing'].transform(lambda x: scaler.fit_transform(x.values.reshape(-1, 1)).flatten())
 valoracions_tidy['Edat'] = scaler.fit_transform(valoracions_tidy[['Edat']])
 
-# Load atributs2 and normalize Edat_model (if available)
-try:
-    atributs2 = pd.read_csv("atributs2.csv")
-    atributs2['Edat_model'] = scaler.fit_transform(atributs2[['Edat_model']])
-except FileNotFoundError:
-    st.warning("atributs2.csv not found. Skipping Edat_model normalization.")
+
 
 # --- User-Based Collaborative Filtering ---
 # User-item matrix
