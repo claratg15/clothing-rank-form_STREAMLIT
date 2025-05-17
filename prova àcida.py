@@ -259,8 +259,7 @@ usuari_escollit = new_data
 
 valoracions_tidy = valoracions.melt(
     id_vars=['usuari', 'Home', 'Dona', 'Altres', 'Edat', 'Físicament en botiga', 'Online', 'Ambdues opcions'],
-    value_vars=rank_cols,
-    var_name='rank_col',
+    var_name='imatge',
     value_name='imatge'
 )
 
