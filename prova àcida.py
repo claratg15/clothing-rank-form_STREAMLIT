@@ -399,9 +399,10 @@ if st.button("Ja tinc el meu rànquing final"):
     top3_recomanacions = top10_recomanacions_ub.head(3)
     ratings = {}
 
+
     for idx, row in top3_recomanacions.iterrows():
         img_name = row['imatge']
-        img_path = os.path.join("subset_100_images", f"{img_name}.jpg")  # Adjust extension if needed
+        img_path = os.path.join(IMAGE_FOLDER, f"{img_name}")  # Adjust extension if needed
         st.image(img_path, caption=f"Peça de roba: {img_name}", use_container_width=True)
         rating = st.number_input(f"Puntua aquesta recomanació ({img_name}) de l'1 al 10", min_value=1, max_value=10, step=1, key=f"rating_{img_name}")
         ratings[img_name] = rating
