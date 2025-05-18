@@ -168,8 +168,6 @@ if st.button("Ja tinc el meu rànquing final"):
 
 
     # Configuració de la pàgina
-    st.set_page_config(layout="wide")
-    st.title("Enquesta de preferència de peces de roba")
 
     # Carpeta on estan les fotos
     IMAGE_FOLDER = "subset_100_images" 
@@ -436,8 +434,6 @@ if st.button("Ja tinc el meu rànquing final"):
 
 
     # --- Display Top-3 Recommendations and Allow Rating ---
-    st.subheader("Les teves recomanacions personalitzades")
-    st.write("A continuació es mostren les 3 peces de roba recomanades per a tu. Si us plau, puntua cada imatge de l'1 al 10.")
 
     top3_recomanacions = top10_recomanacions_ub.head(3)
     ratings = {}
