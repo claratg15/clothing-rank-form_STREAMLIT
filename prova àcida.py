@@ -461,13 +461,12 @@ if st.button("Ja tinc el meu rànquing final"):
         for idx, (col, row) in enumerate(zip(cols, top3_recomanacions.iterrows())):
             img_name = row[1]['imatge']  # row[1] accedeix a les dades de la fila
             # Provar extensions comunes per a la imatge
-            possible_extensions = ['.jpg', '.jpeg', '.png']
             img_path = os.path.join("subset_100_images", f"{img_name}")
 
             
             with col:  # Col·locar contingut a la columna corresponent
                 if img_path and os.path.exists(img_path):
-                    st.image(img_path, use_container_width=True)
+                    st.image(img_path)
                     rating = st.slider(
                         f"Puntuació:",
                         min_value=1, max_value=10, step=1, value = 5, key=f"rating_{img_name}"
