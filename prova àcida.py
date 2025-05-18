@@ -170,7 +170,7 @@ if st.button("Ja tinc el meu rànquing final"):
     #     return img_array
 
     # # Load all images
-    # image_paths = [os.path.join("subset_100_images", f) for f in os.listdir("subset_100_images") if f.endswith(('.png', '.jpg', '.jpeg'))]
+    image_paths = [os.path.join("subset_100_images", f) for f in os.listdir("subset_100_images") if f.endswith(('.png', '.jpg', '.jpeg'))]
     # image_data = np.array([load_and_preprocess_image(p) for p in image_paths])
 
     # # Define autoencoder
