@@ -251,11 +251,12 @@ if st.button("Ja tinc el meu rànquing final"):
             st.error("valoracions.csv not found. Please ensure the file exists.")
             st.stop()
 
-
+        # --- Prepara dades de la nova observació (suposem que només hi ha una fila) ---
         genere = new_data.iloc[0]['Gènere']
         compra = new_data.iloc[0]['Compra']
         edat = new_data.iloc[0]['Edat']
-        
+
+        # --- Crear nova fila com a diccionari ---
         new_row = {
             'usuari': valoracions['usuari'].max() + 1,
             'Home': 1 if genere == 'Home' else 0,
@@ -267,29 +268,28 @@ if st.button("Ja tinc el meu rànquing final"):
             'Ambdues': 1 if compra == 'Ambdues per igual' else 0
         }
 
-        # Inicializar las columnas de las fotos con 'NA'
+        # --- Inicialitzar les columnes d’imatges amb NaN ---
         for col in valoracions.columns:
-            if col not in ['usuari', 'Home', 'Dona', 'Altres', 'Edat', 'Físicament en botiga', 'Online', 'Ambdues']:
-                new_row[col] = 'NA'
+            if col not in new_row:
+                new_row[col] = np.nan
 
-       
-        for i in range(new_data.shape[0]):
-            for j in range(3, new_data.shape[1]):  # 4 a n en R => 3 a n-1 en Python
-                for k in range(63, 162):  # 64 a 163 en R => 63 a 162 en Python (0-based)
-                    val = new_data.iat[i, j]
-                    colname_dades = valoracions.columns[k]
-                    if val == colname_dades:
-                        rank_str = new_data.columns[j][5:7]  # substring amb índex 5 a 7 (com en R)
-                        try:
-                            valoracions.iat[i, k] = int(rank_str)
-                        except ValueError:
-                            valoracions.iat[i, k] = np.nan
-                    elif pd.isna(valoracions.iat[i, k]):
-                        valoracions.iat[i, k] = np.nan
+        # --- Convertir la nova fila en DataFrame i afegir-la a valoracions ---
+        new_row_df = pd.DataFrame([new_row])
+        valoracions = pd.concat([valoracions, new_row_df], ignore_index=True)
 
-        # Convertir la nueva fila en un DataFrame y concatenarla con el DataFrame original
-        new_row_valoracions = pd.DataFrame([new_row])
-        valoracions = pd.concat([valoracions, new_row_valoracions], ignore_index=True)
+        # --- Assignar valors de rànquing a la nova fila ---
+        # nova fila està a l’última posició
+        new_index = len(valoracions) - 1
+
+        # recorrem les columnes de rànquing (rank_1, rank_2, etc.)
+        for j in range(3, new_data.shape[1]):  # des de la 4a columna en R
+            image_name = new_data.iat[0, j]  # valor de la cel·la (nom de la imatge)
+            if image_name in valoracions.columns:
+                try:
+                    rank_str = new_data.columns[j][5:7]  # extreu "1", "2", ..., "10"
+                    valoracions.at[new_index, image_name] = int(rank_str)
+                except ValueError:
+                    valoracions.at[new_index, image_name] = np.nan
 
         print(valoracions)
 
