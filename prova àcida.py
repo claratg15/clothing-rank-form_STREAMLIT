@@ -265,7 +265,7 @@ if st.button("Ja tinc el meu rànquing final"):
             'Edat': edat,
             'Físicament en botiga': 1 if compra == 'Físicament en botiga' else 0,
             'Online': 1 if compra == 'Online' else 0,
-            'Ambdues': 1 if compra == 'Ambdues per igual' else 0
+            'Ambdues opcions': 1 if compra == 'Ambdues opcions per igual' else 0
         }
 
         # --- Inicialitzar les columnes d’imatges amb NaN ---
@@ -283,7 +283,7 @@ if st.button("Ja tinc el meu rànquing final"):
 
         # recorrem les columnes de rànquing (rank_1, rank_2, etc.)
         for j in range(3, new_data.shape[1]):  # des de la 4a columna en R
-            image_name = new_data.iat[0, j]  # valor de la cel·la (nom de la imatge)
+            image_name = str(new_data.iat[0, j]) + ".jpg"  # valor de la cel·la (nom de la imatge)
             if image_name in valoracions.columns:
                 try:
                     rank_str = new_data.columns[j][5:7]  # extreu "1", "2", ..., "10"
