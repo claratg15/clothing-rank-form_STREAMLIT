@@ -431,6 +431,6 @@ if st.button("Ja tinc el meu rànquing final"):
             st.success("Gràcies per les teves puntuacions!")
                 # Optionally save ratings to a file or Dropbox
         else:
-        st.write("Ja has respost l'enquesta. Moltes gràcies per la teva participació!")
+            st.write("Ja has respost l'enquesta. Moltes gràcies per la teva participació!")
 
 
