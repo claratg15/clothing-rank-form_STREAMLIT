@@ -491,89 +491,89 @@ if st.button("Ja tinc el meu rànquing final"):
     #     else:
     #         st.write("Ja has respost l'enquesta. Moltes gràcies per la teva participació!")
 
-# --- Top-10 Recommendations ---
-top10_recomanacions_ub = pd.DataFrame({
-    'imatge': imatge,
-    'prediccio_rkg': prediccio_rkg,
-    'n_obs_prediccio': n_obs_prediccio
-}).sort_values('prediccio_rkg').head(10)
+    # --- Top-10 Recommendations ---
+    top10_recomanacions_ub = pd.DataFrame({
+        'imatge': imatge,
+        'prediccio_rkg': prediccio_rkg,
+        'n_obs_prediccio': n_obs_prediccio
+    }).sort_values('prediccio_rkg').head(10)
 
-# Nom de l'arxiu de Dropbox on guardarem les respostes
-DATA_FILE = "/respostes_prova_acida.csv"
+    # Nom de l'arxiu de Dropbox on guardarem les respostes
+    DATA_FILE = "/respostes_prova_acida.csv"
 
-# Initialize session state for ratings and submission status
-if "ratings" not in st.session_state:
-    st.session_state.ratings = {}
-if "ratings_submitted" not in st.session_state:
-    st.session_state.ratings_submitted = False
+    # Initialize session state for ratings and submission status
+    if "ratings" not in st.session_state:
+        st.session_state.ratings = {}
+    if "ratings_submitted" not in st.session_state:
+        st.session_state.ratings_submitted = False
 
-# Display recommendations and collect ratings
-if not st.session_state.ratings_submitted:
-    if top10_recomanacions_ub.empty:
-        st.warning("No hi ha recomanacions disponibles. Revisa les dades o el procés de predicció.")
-    else:
-        st.subheader("Les teves recomanacions personalitzades")
-        st.write("A continuació es mostren les 3 peces de roba recomanades per a tu. Si us plau, puntua cada imatge de l'1 al 10.")
-        top3_recomanacions = top10_recomanacions_ub.head(3)
-        
-        cols = st.columns(3)
-        
-        for idx, (col, row) in enumerate(zip(cols, top3_recomanacions.iterrows())):
-            img_name = row[1]['imatge']  # Access the image name
-            img_path = os.path.join("subset_100_images", f"{img_name}")
+    # Display recommendations and collect ratings
+    if not st.session_state.ratings_submitted:
+        if top10_recomanacions_ub.empty:
+            st.warning("No hi ha recomanacions disponibles. Revisa les dades o el procés de predicció.")
+        else:
+            st.subheader("Les teves recomanacions personalitzades")
+            st.write("A continuació es mostren les 3 peces de roba recomanades per a tu. Si us plau, puntua cada imatge de l'1 al 10.")
+            top3_recomanacions = top10_recomanacions_ub.head(3)
+            
+            cols = st.columns(3)
+            
+            for idx, (col, row) in enumerate(zip(cols, top3_recomanacions.iterrows())):
+                img_name = row[1]['imatge']  # Access the image name
+                img_path = os.path.join("subset_100_images", f"{img_name}")
 
-            with col:
-                if img_path and os.path.exists(img_path):
-                    st.image(img_path, use_container_width=True)
-                    # Use session state to persist slider value
-                    rating = st.slider(
-                        f"Puntuació per {img_name}:",
-                        min_value=1, max_value=10, step=1, 
-                        key=f"rating_{img_name}",
-                        value=st.session_state.ratings.get(img_name, 1)
+                with col:
+                    if img_path and os.path.exists(img_path):
+                        st.image(img_path, use_container_width=True)
+                        # Use session state to persist slider value
+                        rating = st.slider(
+                            f"Puntuació per {img_name}:",
+                            min_value=1, max_value=10, step=1, 
+                            key=f"rating_{img_name}",
+                            value=st.session_state.ratings.get(img_name, 1)
+                        )
+                        st.session_state.ratings[img_name] = rating
+                    else:
+                        st.error(f"No s'ha trobat la imatge per a {img_name}. Comprova el nom o l'extensió.")
+
+            # Submit button for ratings
+            if st.button("Enviar puntuacions"):
+                if st.session_state.ratings:
+                    # Prepare data for saving
+                    sorted_image_names = [get_image_name(img) for img in sorted_images]
+                    recomanacions = list(top3_recomanacions['imatge'])
+                    puntuacions = [st.session_state.ratings.get(img, None) for img in recomanacions]
+                    new_data2 = pd.DataFrame(
+                        [[genere, edat, compra_mode, *sorted_image_names, *recomanacions, *puntuacions]], 
+                        columns=[
+                            "Gènere", "Edat", "Compra", 
+                            *[f"Rank_{i}" for i in range(1, len(sorted_image_names) + 1)],
+                            "Recom_1", "Recom_2", "Recom_3",
+                            "Rating_1", "Rating_2", "Rating_3"
+                        ]
                     )
-                    st.session_state.ratings[img_name] = rating
-                else:
-                    st.error(f"No s'ha trobat la imatge per a {img_name}. Comprova el nom o l'extensió.")
 
-        # Submit button for ratings
-        if st.button("Enviar puntuacions"):
-            if st.session_state.ratings:
-                # Prepare data for saving
-                sorted_image_names = [get_image_name(img) for img in sorted_images]
-                recomanacions = list(top3_recomanacions['imatge'])
-                puntuacions = [st.session_state.ratings.get(img, None) for img in recomanacions]
-                new_data2 = pd.DataFrame(
-                    [[genere, edat, compra_mode, *sorted_image_names, *recomanacions, *puntuacions]], 
-                    columns=[
-                        "Gènere", "Edat", "Compra", 
-                        *[f"Rank_{i}" for i in range(1, len(sorted_image_names) + 1)],
-                        "Recom_1", "Recom_2", "Recom_3",
-                        "Rating_1", "Rating_2", "Rating_3"
-                    ]
-                )
+                    # Save to Dropbox
+                    local_file = "responses_temp.csv"
+                    download_from_dropbox(DATA_FILE, local_file)
 
-                # Save to Dropbox
-                local_file = "responses_temp.csv"
-                download_from_dropbox(DATA_FILE, local_file)
+                    if os.path.exists(local_file):
+                        df = pd.read_csv(local_file)
+                        df = pd.concat([df, new_data2], ignore_index=True)
+                    else:
+                        df = new_data2
 
-                if os.path.exists(local_file):
-                    df = pd.read_csv(local_file)
-                    df = pd.concat([df, new_data2], ignore_index=True)
-                else:
-                    df = new_data2
+                    df.to_csv(local_file, index=False)
+                    upload_to_dropbox(local_file, DATA_FILE)
 
-                df.to_csv(local_file, index=False)
-                upload_to_dropbox(local_file, DATA_FILE)
-
-                # Display submitted ratings
-                st.write("Puntuacions rebudes:")
-                for img_name, rating in st.session_state.ratings.items():
-                    st.write(f"Peça {img_name}: {rating}/10")
-                st.success("Gràcies per les teves puntuacions!")
-                
-                # Mark ratings as submitted
-                st.session_state.ratings_submitted = True
-                st.session_state.response_saved = True
-else:
-    st.write("Ja has respost l'enquesta. Moltes gràcies per la teva participació!")
+                    # Display submitted ratings
+                    st.write("Puntuacions rebudes:")
+                    for img_name, rating in st.session_state.ratings.items():
+                        st.write(f"Peça {img_name}: {rating}/10")
+                    st.success("Gràcies per les teves puntuacions!")
+                    
+                    # Mark ratings as submitted
+                    st.session_state.ratings_submitted = True
+                    st.session_state.response_saved = True
+    else:
+        st.write("Ja has respost l'enquesta. Moltes gràcies per la teva participació!")
