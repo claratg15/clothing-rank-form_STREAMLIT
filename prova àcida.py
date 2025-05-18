@@ -159,9 +159,9 @@ if st.button("Ja tinc el meu rànquing final"):
     from sklearn.metrics import mean_squared_error
     import tensorflow as tf
 
-    # # Set random seeds for reproducibility
-    # np.random.seed(123)
-    # tf.random.set_seed(123)
+     # Set random seeds for reproducibility
+     np.random.seed(123)
+     tf.random.set_seed(123)
 
     # # --- Autoencoder for Image Feature Extraction ---
     # def load_and_preprocess_image(image_path, target_size=(64, 64)):
@@ -206,15 +206,15 @@ if st.button("Ja tinc el meu rànquing final"):
     # image_features = encoder.predict(image_data)
 
     # --- Cosine Similarity ---
-    def cosine_similarity_matrix(feature_matrix):
-        norm = np.sqrt(np.sum(feature_matrix ** 2, axis=1))
-        normalized = feature_matrix / norm[:, np.newaxis]
-        sim_matrix = normalized @ normalized.T
-        return sim_matrix
+    # def cosine_similarity_matrix(feature_matrix):
+    #     norm = np.sqrt(np.sum(feature_matrix ** 2, axis=1))
+    #     normalized = feature_matrix / norm[:, np.newaxis]
+    #     sim_matrix = normalized @ normalized.T
+    #     return sim_matrix
 
-    cos_sim_matrix = cosine_similarity_matrix(image_features)
-    image_names = [os.path.splitext(os.path.basename(p))[0] for p in image_paths]
-    cos_sim_matrix = pd.DataFrame(cos_sim_matrix, index=image_names, columns=image_names)
+    # cos_sim_matrix = cosine_similarity_matrix(image_features)
+    # image_names = [os.path.splitext(os.path.basename(p))[0] for p in image_paths]
+    # cos_sim_matrix = pd.DataFrame(cos_sim_matrix, index=image_names, columns=image_names)
 
 
     # --- Load and Prepare Data ---
