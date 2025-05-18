@@ -251,16 +251,20 @@ if st.button("Ja tinc el meu rànquing final"):
             st.error("valoracions.csv not found. Please ensure the file exists.")
             st.stop()
 
+
+        genere = new_data.iloc[0]['Gènere']
+        compra = new_data.iloc[0]['Compra']
+        edat = new_data.iloc[0]['Edat']
         
         new_row = {
-            'usuari': valoracions['usuari'].max() + 1,  
-            'Home': 1 if new_data['Gènere'] == 'Home' else 0,
-            'Dona': 1 if new_data['Gènere'] == 'Dona' else 0,
-            'Altres': 1 if new_data['Gènere'] == 'Altres' else 0,
-            'Edat': new_data['Edat'],
-            'Físicament en botiga': 1 if new_data['Compra'] == 'Físicament en botiga' else 0,
-            'Online': 1 if new_data['Compra'] == 'Online' else 0,
-            'Ambdues': 1 if new_data['Compra'] == 'Ambdues per igual' else 0
+            'usuari': valoracions['usuari'].max() + 1,
+            'Home': 1 if genere == 'Home' else 0,
+            'Dona': 1 if genere == 'Dona' else 0,
+            'Altres': 1 if genere == 'Altres' else 0,
+            'Edat': edat,
+            'Físicament en botiga': 1 if compra == 'Físicament en botiga' else 0,
+            'Online': 1 if compra == 'Online' else 0,
+            'Ambdues': 1 if compra == 'Ambdues per igual' else 0
         }
 
         # Inicializar las columnas de las fotos con 'NA'
