@@ -159,51 +159,51 @@ if st.button("Ja tinc el meu rànquing final"):
     from sklearn.metrics import mean_squared_error
     import tensorflow as tf
 
-    # Set random seeds for reproducibility
-    np.random.seed(123)
-    tf.random.set_seed(123)
+    # # Set random seeds for reproducibility
+    # np.random.seed(123)
+    # tf.random.set_seed(123)
 
-    # --- Autoencoder for Image Feature Extraction ---
-    def load_and_preprocess_image(image_path, target_size=(64, 64)):
-        img = Image.open(image_path).resize(target_size)
-        img_array = np.array(img) / 255.0  # Normalize to [0, 1]
-        return img_array
+    # # --- Autoencoder for Image Feature Extraction ---
+    # def load_and_preprocess_image(image_path, target_size=(64, 64)):
+    #     img = Image.open(image_path).resize(target_size)
+    #     img_array = np.array(img) / 255.0  # Normalize to [0, 1]
+    #     return img_array
 
-    # Load all images
-    image_paths = [os.path.join("subset_100_images", f) for f in os.listdir("subset_100_images") if f.endswith(('.png', '.jpg', '.jpeg'))]
-    image_data = np.array([load_and_preprocess_image(p) for p in image_paths])
+    # # Load all images
+    # image_paths = [os.path.join("subset_100_images", f) for f in os.listdir("subset_100_images") if f.endswith(('.png', '.jpg', '.jpeg'))]
+    # image_data = np.array([load_and_preprocess_image(p) for p in image_paths])
 
-    # Define autoencoder
-    input_img = Input(shape=(64, 64, 3))
+    # # Define autoencoder
+    # input_img = Input(shape=(64, 64, 3))
 
-    # Encoder
-    encoded = Conv2D(32, (3, 3), activation='relu', padding='same')(input_img)
-    encoded = MaxPooling2D((2, 2))(encoded)
-    encoded = Conv2D(16, (3, 3), activation='relu', padding='same')(encoded)
-    encoded = MaxPooling2D((2, 2))(encoded)
-    encoded = Flatten()(encoded)
-    encoded = Dense(128, activation='relu')(encoded)  # Latent space
+    # # Encoder
+    # encoded = Conv2D(32, (3, 3), activation='relu', padding='same')(input_img)
+    # encoded = MaxPooling2D((2, 2))(encoded)
+    # encoded = Conv2D(16, (3, 3), activation='relu', padding='same')(encoded)
+    # encoded = MaxPooling2D((2, 2))(encoded)
+    # encoded = Flatten()(encoded)
+    # encoded = Dense(128, activation='relu')(encoded)  # Latent space
 
-    # Decoder
-    decoded = Dense(16 * 16 * 16)(encoded)
-    decoded = Reshape((16, 16, 16))(decoded)
-    decoded = Conv2D(16, (3, 3), activation='relu', padding='same')(decoded)
-    decoded = UpSampling2D((2, 2))(decoded)
-    decoded = Conv2D(32, (3, 3), activation='relu', padding='same')(decoded)
-    decoded = UpSampling2D((2, 2))(decoded)
-    decoded = Conv2D(3, (3, 3), activation='sigmoid', padding='same')(decoded)
+    # # Decoder
+    # decoded = Dense(16 * 16 * 16)(encoded)
+    # decoded = Reshape((16, 16, 16))(decoded)
+    # decoded = Conv2D(16, (3, 3), activation='relu', padding='same')(decoded)
+    # decoded = UpSampling2D((2, 2))(decoded)
+    # decoded = Conv2D(32, (3, 3), activation='relu', padding='same')(decoded)
+    # decoded = UpSampling2D((2, 2))(decoded)
+    # decoded = Conv2D(3, (3, 3), activation='sigmoid', padding='same')(decoded)
 
-    # Autoencoder and encoder models
-    autoencoder = Model(input_img, decoded)
-    encoder = Model(input_img, encoded)
+    # # Autoencoder and encoder models
+    # autoencoder = Model(input_img, decoded)
+    # encoder = Model(input_img, encoded)
 
-    # Compile autoencoder (assuming pre-trained for simplicity)
-    autoencoder.compile(optimizer='adam', loss='mse')
-    # Uncomment to train (if needed):
-    # autoencoder.fit(image_data, image_data, epochs=50, batch_size=32, validation_split=0.2, verbose=1)
+    # # Compile autoencoder (assuming pre-trained for simplicity)
+    # autoencoder.compile(optimizer='adam', loss='mse')
+    # # Uncomment to train (if needed):
+    # # autoencoder.fit(image_data, image_data, epochs=50, batch_size=32, validation_split=0.2, verbose=1)
 
-    # Extract image features
-    image_features = encoder.predict(image_data)
+    # # Extract image features
+    # image_features = encoder.predict(image_data)
 
     # --- Cosine Similarity ---
     def cosine_similarity_matrix(feature_matrix):
@@ -218,7 +218,12 @@ if st.button("Ja tinc el meu rànquing final"):
 
 
     # --- Load and Prepare Data ---
-    valoracions = pd.read_csv("valoracions.csv")
+    try:
+        valoracions = pd.read_csv("valoracions.csv")
+    except FileNotFoundError:
+        st.error("valoracions.csv not found. Please ensure the file exists.")
+        st.stop()
+
     # valoracions = pd.concat([valoracions, new_data], ignore_index=True)
 
     # Set usuari_escollit as the last user (from new_data)
