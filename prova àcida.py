@@ -433,18 +433,6 @@ if st.button("Ja tinc el meu rànquing final"):
     }).sort_values('prediccio_rkg').head(10)
 
 
-    # --- Display Top-3 Recommendations and Allow Rating ---
-
-    top3_recomanacions = top10_recomanacions_ub.head(3)
-    ratings = {}
-    for idx, row in top3_recomanacions.iterrows():
-        img_name = row['imatge']
-        img_path = os.path.join(IMAGE_FOLDER, img_name)  # Adjust extension if needed
-        st.image(img_path, caption=f"Peça de roba: {img_name}", use_container_width=True)
-        rating = st.slider(f"Puntua aquesta recomanació ({img_name}) de l'1 al 10", min_value=1, max_value=10, step=1, key=f"rating_{img_name}")
-        ratings[img_name] = rating
-
-
     # Nom de l'arxiu de Dropbox on guardarem les respostes
     DATA_FILE = "/respostes_prova_acida.csv"
     
@@ -463,13 +451,12 @@ if st.button("Ja tinc el meu rànquing final"):
             # Provar extensions comunes per a la imatge
             img_path = os.path.join("subset_100_images", f"{img_name}")
 
-            
             with col:  # Col·locar contingut a la columna corresponent
                 if img_path and os.path.exists(img_path):
                     st.image(img_path)
                     rating = st.slider(
                         f"Puntuació:",
-                        min_value=1, max_value=10, step=1, value = 5, key=f"rating_{img_name}"
+                        min_value=1, max_value=10, step=1, key=f"rating_{img_name}"
                     )
                     ratings[img_name] = rating
                 else:
