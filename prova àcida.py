@@ -160,8 +160,8 @@ if st.button("Ja tinc el meu rànquing final"):
     import tensorflow as tf
 
      # Set random seeds for reproducibility
-     np.random.seed(123)
-     tf.random.set_seed(123)
+    np.random.seed(123)
+    tf.random.set_seed(123)
 
     # # --- Autoencoder for Image Feature Extraction ---
     # def load_and_preprocess_image(image_path, target_size=(64, 64)):
