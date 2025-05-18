@@ -151,17 +151,32 @@ if st.button("Ja tinc el meu rànquing final"):
     import numpy as np
     import pandas as pd
     from sklearn.preprocessing import StandardScaler
-    from tensorflow.keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, Dense, Flatten, Reshape
-    from tensorflow.keras.models import Model
+    #from tensorflow.keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, Dense, Flatten, Reshape
+    #from tensorflow.keras.models import Model
     from PIL import Image
     import os
     from sklearn.metrics.pairwise import cosine_similarity
     from sklearn.metrics import mean_squared_error
-    import tensorflow as tf
+    #import tensorflow as tf
+    import streamlit as st
+    import os
+    import random
+    import pandas as pd
+    import dropbox
+    import requests
+    from streamlit_sortables import sort_items
+
+
+    # Configuració de la pàgina
+    st.set_page_config(layout="wide")
+    st.title("Enquesta de preferència de peces de roba")
+
+    # Carpeta on estan les fotos
+    IMAGE_FOLDER = "subset_100_images" 
 
      # Set random seeds for reproducibility
     np.random.seed(123)
-    tf.random.set_seed(123)
+    # tf.random.set_seed(123)
 
     # # --- Autoencoder for Image Feature Extraction ---
     # def load_and_preprocess_image(image_path, target_size=(64, 64)):
@@ -213,7 +228,7 @@ if st.button("Ja tinc el meu rànquing final"):
     #     return sim_matrix
 
     # cos_sim_matrix = cosine_similarity_matrix(image_features)
-    image_names = [os.path.splitext(os.path.basename(p))[0] for p in image_paths]
+    image_names = [os.path.basename(p) for p in image_paths]
     # cos_sim_matrix = pd.DataFrame(cos_sim_matrix, index=image_names, columns=image_names)
 
 
@@ -224,10 +239,11 @@ if st.button("Ja tinc el meu rànquing final"):
         st.error("valoracions.csv not found. Please ensure the file exists.")
         st.stop()
 
+    #print(f"Dades per usuari_escollit (1): {valoracions[valoracions['usuari'] == 1].head()}")
     # valoracions = pd.concat([valoracions, new_data], ignore_index=True)
 
     # Set usuari_escollit as the last user (from new_data)
-    usuari_escollit = 2
+    usuari_escollit = 1
 
     # demografics = valoracions[[
     #     "usuari", "Home", "Dona", "Altres", "Edat", 
@@ -241,6 +257,9 @@ if st.button("Ja tinc el meu rànquing final"):
         value_name='rànquing'
     )
 
+    #print(f"Dades per usuari_escollit (1) valoracions_tidy: {valoracions_tidy[valoracions_tidy['usuari'] == 1].head()}")
+
+
     # --- Normalize Data ---
     scaler = StandardScaler()
     valoracions_tidy['rànquing'] = valoracions_tidy.groupby('usuari')['rànquing'].transform(lambda x: scaler.fit_transform(x.values.reshape(-1, 1)).flatten())
@@ -252,6 +271,7 @@ if st.button("Ja tinc el meu rànquing final"):
     # User-item matrix
     valoracions_usuaris = valoracions_tidy.pivot(index='imatge', columns='usuari', values='rànquing').fillna(np.nan)
     demografics = valoracions_tidy[['usuari', 'Edat', 'Home', 'Dona', 'Altres', 'Físicament en botiga', 'Online', 'Ambdues opcions']].drop_duplicates()
+    # print(valoracions_usuaris)
 
     # Similarity function
     def correlacio_func_combined(usuari_x, usuari_y, ranquings_data, demo_data):
@@ -290,21 +310,21 @@ if st.button("Ja tinc el meu rànquing final"):
 
     resta_usuaris = [u for u in valoracions_usuaris.columns if u != usuari_escollit]
     similitud_usuaris = correlacio_func_combined(resta_usuaris, usuari_escollit, valoracions_usuaris, demografics)
+    #print(similitud_usuaris)
 
     # --- Identify Unseen Items ---
     # Get all possible images
     all_images = set(image_names)
-    # Get images rated by the user
-    rated_images = set(valoracions_tidy[valoracions_tidy['usuari'] == usuari_escollit]['imatge'])
     # Unseen images
-    roba_no_vista = list(all_images - rated_images)
+    roba_no_vista = valoracions_tidy[(valoracions_tidy['usuari'] == (usuari_escollit)) & (valoracions_tidy['rànquing'].isna())]['imatge'].unique().tolist()
 
     # --- Cross-Validation for Optimal k ---
     def predict_for_test(train, test, similitud_usuaris, k):
         predictions = []
+
         for _, row in test.iterrows():
             u, img = row['usuari'], row['imatge']
-            usuaris_imatge_i = train[train['imatge'] == img]['usuari'].unique()
+            usuaris_imatge_i = train[train['imatge'] == img][train['rànquing'].notna()]['usuari'].unique()
             
             if len(usuaris_imatge_i) < 5:
                 continue
@@ -316,21 +336,31 @@ if st.button("Ja tinc el meu rànquing final"):
                 continue
             
             valoracions_top = train[train['imatge'] == img][train['usuari'].isin(top_usuaris['usuari'])]
-            top_usuaris = top_usuaris.merge(valoracions_top[['usuari', 'rànquing']], on='usuari')
+            top_usuaris = top_usuaris.merge(valoracions_top[['usuari', 'rànquing']], on='usuari', how='left')
+            top_usuaris = top_usuaris.sort_values('similitud', ascending=False).head(k)
             
-            pred = np.sum(top_usuaris['similitud'] * top_usuaris['rànquing']) / np.sum(top_usuaris['similitud'])
-            real = test[(test['usuari'] == u) & (test['imatge'] == img)]['rànquing'].values[0]
+            pred = np.sum(top_usuaris['similitud'] * top_usuaris['rànquing'].fillna(0)) / np.sum(top_usuaris['similitud'])
+
+            real = test[(test['usuari'] == u) & (test['imatge'] == img)]['rànquing'].values
             
             if pd.isna(pred) or pd.isna(real):
+                print(f"Imatge {img} saltada: pred o real és NaN (pred={pred}, real={real})")
                 continue
             
-            predictions.append({'real': real, 'pred': pred})
-        
+            predictions.append({'real': real[0], 'pred': pred})
+
+        print(f"Prediccions generades: {len(predictions)}")
         return pd.DataFrame(predictions)
 
+
     def cross_validate_k_user(valoracions_tidy_norm, similitud_usuaris, usuari_objectiu, k_values=range(1, 16), folds=5):
-        user_data = valoracions_tidy_norm[valoracions_tidy_norm['usuari'] == usuari_objectiu]
-        user_data = user_data.copy()  # Avoid SettingWithCopyWarning
+        user_data = valoracions_tidy_norm[valoracions_tidy_norm['usuari'] == (usuari_objectiu)][valoracions_tidy_norm['rànquing'].notna()].copy()
+
+
+        if user_data.empty:
+            print(f"Error: No hi ha dades per a l'usuari {usuari_objectiu}")
+            return pd.DataFrame()
+        
         user_data['fold'] = np.random.choice(range(1, folds + 1), size=len(user_data), replace=True)
         
         all_train_data = valoracions_tidy_norm[valoracions_tidy_norm['usuari'] != usuari_objectiu]
@@ -356,33 +386,46 @@ if st.button("Ja tinc el meu rànquing final"):
 
     # Apply cross-validation
     resultats_k_user = cross_validate_k_user(valoracions_tidy, similitud_usuaris, usuari_escollit)
+    print(resultats_k_user)
+
     best_k = resultats_k_user[resultats_k_user['rmse'] == resultats_k_user['rmse'].min()]['k'].iloc[0]
+    print(best_k)
 
     # --- Predict Rankings for Unseen Items ---
-    prediccio_rkg = []
-    imatge = []
-    n_obs_prediccio = []
+    prediccio_rkg = np.array([np.nan] * len(roba_no_vista))
+    imatge = np.array([np.nan] * len(roba_no_vista), dtype=object)
+    n_obs_prediccio = np.array([np.nan] * len(roba_no_vista))
 
-    for img in roba_no_vista:
-        usuaris_imatge_i = valoracions_tidy[valoracions_tidy['imatge'] == img]['usuari'].unique()
-        
+
+    for i in range(len(roba_no_vista)):
+        if roba_no_vista[i] not in valoracions_tidy['imatge'].values:
+            print(f"Imatge {roba_no_vista[i]} (tipus: {type(roba_no_vista[i])}) no trobada a valoracions_tidy")
+            continue
+
+        valoracions_tidy['imatge'] = valoracions_tidy['imatge'].astype(str)
+        roba_no_vista = [str(img) for img in roba_no_vista]
+        usuaris_imatge_i = valoracions_tidy[(valoracions_tidy['imatge'] == roba_no_vista[i]) & (valoracions_tidy['rànquing'].notna())]['usuari'].unique()
+
         if len(usuaris_imatge_i) < 5:
             continue
         
-        top_usuaris = similitud_usuaris[similitud_usuaris['similitud'] >= 0][similitud_usuaris['usuari'].isin(usuaris_imatge_i)]
+        top_usuaris = similitud_usuaris[(similitud_usuaris['similitud'] >= 0) & (similitud_usuaris['usuari'].isin(usuaris_imatge_i))]
         top_usuaris = top_usuaris.sort_values('similitud', ascending=False).head(best_k)
         
         if len(top_usuaris) < 3:
             continue
         
-        valoracions_top = valoracions_tidy[valoracions_tidy['imatge'] == img][valoracions_tidy['usuari'].isin(top_usuaris['usuari'])]
-        top_usuaris = top_usuaris.merge(valoracions_top[['usuari', 'rànquing']], on='usuari')
-        
-        pred = np.sum(top_usuaris['similitud'] * top_usuaris['rànquing']) / np.sum(top_usuaris['similitud'])
-        
-        prediccio_rkg.append(pred)
-        imatge.append(img)
-        n_obs_prediccio.append(len(top_usuaris))
+        valoracions_top = valoracions_tidy[valoracions_tidy['imatge'] == roba_no_vista[i]][valoracions_tidy['usuari'].isin(top_usuaris['usuari'])]
+        valoracions_top['usuari'] = valoracions_top['usuari'].astype(str)
+        top_usuaris['usuari'] = top_usuaris['usuari'].astype(str)
+
+        top_usuaris = top_usuaris.merge(valoracions_top[['usuari', 'rànquing']], on='usuari', how='left')
+
+        prediccio_rkg[i] = np.sum(top_usuaris['similitud'] * top_usuaris['rànquing']) / np.sum(top_usuaris['similitud'])    
+        imatge[i] = roba_no_vista[i]
+        n_obs_prediccio[i] = len(top_usuaris)
+
+
 
     # --- Top-10 Recommendations ---
     top10_recomanacions_ub = pd.DataFrame({
@@ -398,18 +441,45 @@ if st.button("Ja tinc el meu rànquing final"):
 
     top3_recomanacions = top10_recomanacions_ub.head(3)
     ratings = {}
-
-
     for idx, row in top3_recomanacions.iterrows():
         img_name = row['imatge']
         img_path = os.path.join(IMAGE_FOLDER, img_name)  # Adjust extension if needed
         st.image(img_path, caption=f"Peça de roba: {img_name}", use_container_width=True)
-        rating = st.number_input(f"Puntua aquesta recomanació ({img_name}) de l'1 al 10", min_value=1, max_value=10, step=1, key=f"rating_{img_name}")
+        rating = st.slider(f"Puntua aquesta recomanació ({img_name}) de l'1 al 10", min_value=1, max_value=10, step=1, key=f"rating_{img_name}")
         ratings[img_name] = rating
+
 
     # Nom de l'arxiu de Dropbox on guardarem les respostes
     DATA_FILE = "/respostes_prova_acida.csv"
     
+    if top10_recomanacions_ub.empty:
+        st.warning("No hi ha recomanacions disponibles. Revisa les dades o el procés de predicció.")
+    else:
+        st.subheader("Les teves recomanacions personalitzades")
+        st.write("A continuació es mostren les 3 peces de roba recomanades per a tu. Si us plau, puntua cada imatge de l'1 al 10.")
+        top3_recomanacions = top10_recomanacions_ub.head(3)
+        ratings = {}
+        
+        cols = st.columns(3)
+        
+        for idx, (col, row) in enumerate(zip(cols, top3_recomanacions.iterrows())):
+            img_name = row[1]['imatge']  # row[1] accedeix a les dades de la fila
+            # Provar extensions comunes per a la imatge
+            possible_extensions = ['.jpg', '.jpeg', '.png']
+            img_path = os.path.join("subset_100_images", f"{img_name}")
+
+            
+            with col:  # Col·locar contingut a la columna corresponent
+                if img_path and os.path.exists(img_path):
+                    st.image(img_path, use_container_width=True)
+                    rating = st.slider(
+                        f"Puntuació:",
+                        min_value=1, max_value=10, step=1, value = 5, key=f"rating_{img_name}"
+                    )
+                    ratings[img_name] = rating
+                else:
+                    st.error(f"No s'ha trobat la imatge per a {img_name}. Comprova el nom o l'extensió.")
+
 
     if not st.session_state.response_saved:
         if st.button("Enviar puntuacions"):
