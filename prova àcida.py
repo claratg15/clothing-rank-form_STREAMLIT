@@ -269,12 +269,19 @@ if st.button("Ja tinc el meu rànquing final"):
                 new_row[col] = 'NA'
 
        
-        for col in new_data.index:
-            if col.startswith("Rank_"):
-                rank = int(col.split("_")[1])
-                image_name = new_data[col]
-                if image_name in new_row.index:
-                    new_row[image_name] = rank
+        for i in range(new_data.shape[0]):
+            for j in range(3, new_data.shape[1]):  # 4 a n en R => 3 a n-1 en Python
+                for k in range(63, 162):  # 64 a 163 en R => 63 a 162 en Python (0-based)
+                    val = new_data.iat[i, j]
+                    colname_dades = valoracions.columns[k]
+                    if val == colname_dades:
+                        rank_str = new_data.columns[j][5:7]  # substring amb índex 5 a 7 (com en R)
+                        try:
+                            valoracions.iat[i, k] = int(rank_str)
+                        except ValueError:
+                            valoracions.iat[i, k] = np.nan
+                    elif pd.isna(valoracions.iat[i, k]):
+                        valoracions.iat[i, k] = np.nan
 
         # Convertir la nueva fila en un DataFrame y concatenarla con el DataFrame original
         new_row_valoracions = pd.DataFrame([new_row])
