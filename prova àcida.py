@@ -291,7 +291,10 @@ if st.button("Ja tinc el meu rànquing final"):
                 except ValueError:
                     valoracions.at[new_index, image_name] = np.nan
 
-        print(valoracions)
+        local_file = "responses_temp.csv"
+        DATA_FILE = "/valoracions.csv"
+        valoracions.to_csv(local_file, index=False)
+        upload_to_dropbox(local_file, DATA_FILE)
 
 
 #         # Set usuari_escollit as the last user (from new_data)
