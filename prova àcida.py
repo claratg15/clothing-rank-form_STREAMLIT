@@ -454,7 +454,7 @@ if st.button("Ja tinc el meu rànquing final"):
             with col:  # Col·locar contingut a la columna corresponent
                 if img_path and os.path.exists(img_path):
                     st.image(img_path)
-                    rating = st.slider(
+                    rating = st.number_input(
                         f"Puntuació:",
                         min_value=1, max_value=10, step=1, key=f"rating_{img_name}"
                     )
