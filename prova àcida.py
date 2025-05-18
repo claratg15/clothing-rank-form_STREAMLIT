@@ -406,31 +406,31 @@ if st.button("Ja tinc el meu rànquing final"):
     
 
     if not st.session_state.response_saved:
-    if st.button("Enviar puntuacions"):
-        if ratings:
-            sorted_image_names = [get_image_name(img) for img in sorted_images]
-            recomanacions = list(top3_recomanacions['imatge'])
-            puntuacions = [ratings.get(img, None) for img in recomanacions]
-            new_data2 = pd.DataFrame([[genere,edat,compra_mode,*sorted_image_names,*recomanacions,*puntuacions]], 
-            columns=["Gènere", "Edat", "Compra",*[f"Rank_{i}" for i in range(1, len(sorted_image_names) + 1)],"Recom_1", "Recom_2", "Recom_3",
-            "Rating_1", "Rating_2", "Rating_3"])
+        if st.button("Enviar puntuacions"):
+            if ratings:
+                sorted_image_names = [get_image_name(img) for img in sorted_images]
+                recomanacions = list(top3_recomanacions['imatge'])
+                puntuacions = [ratings.get(img, None) for img in recomanacions]
+                new_data2 = pd.DataFrame([[genere,edat,compra_mode,*sorted_image_names,*recomanacions,*puntuacions]], 
+                columns=["Gènere", "Edat", "Compra",*[f"Rank_{i}" for i in range(1, len(sorted_image_names) + 1)],"Recom_1", "Recom_2", "Recom_3",
+                "Rating_1", "Rating_2", "Rating_3"])
 
-            local_file = "responses_temp.csv"
-            download_from_dropbox(DATA_FILE, local_file)
+                local_file = "responses_temp.csv"
+                download_from_dropbox(DATA_FILE, local_file)
 
-            if os.path.exists(local_file):
-                df = pd.read_csv(local_file)
-                df = pd.concat([df, new_data2], ignore_index=True)
-            else:
-                df = new_data2  
+                if os.path.exists(local_file):
+                    df = pd.read_csv(local_file)
+                    df = pd.concat([df, new_data2], ignore_index=True)
+                else:
+                    df = new_data2  
 
 
-        st.write("Puntuacions rebudes:")
-        for img_name, rating in ratings.items():
-            st.write(f"Peça {img_name}: {rating}/10")
-        st.success("Gràcies per les teves puntuacions!")
-            # Optionally save ratings to a file or Dropbox
-    else:
-    st.write("Ja has respost l'enquesta. Moltes gràcies per la teva participació!")
+            st.write("Puntuacions rebudes:")
+            for img_name, rating in ratings.items():
+                st.write(f"Peça {img_name}: {rating}/10")
+            st.success("Gràcies per les teves puntuacions!")
+                # Optionally save ratings to a file or Dropbox
+        else:
+        st.write("Ja has respost l'enquesta. Moltes gràcies per la teva participació!")
 
 
