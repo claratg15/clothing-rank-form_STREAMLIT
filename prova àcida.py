@@ -347,11 +347,11 @@ if st.button("Ja tinc el meu rànquing final"):
                 if len(preds) == 0:
                     fold_rmse.append(np.nan)
                     continue
-                rmse_val = mean_squared_error(preds['real'], preds['pred'], squared=False)
+                mse_val = mean_squared_error(preds['real'], preds['pred'])
+                rmse_val = np.sqrt(mse_val)
                 fold_rmse.append(rmse_val)
             
             results.append({'k': k, 'rmse': np.nanmean(fold_rmse)})
-        
         return pd.DataFrame(results)
 
     # Apply cross-validation
