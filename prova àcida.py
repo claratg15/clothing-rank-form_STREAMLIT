@@ -213,7 +213,7 @@ if st.button("Ja tinc el meu rànquing final"):
     #     return sim_matrix
 
     # cos_sim_matrix = cosine_similarity_matrix(image_features)
-    # image_names = [os.path.splitext(os.path.basename(p))[0] for p in image_paths]
+    image_names = [os.path.splitext(os.path.basename(p))[0] for p in image_paths]
     # cos_sim_matrix = pd.DataFrame(cos_sim_matrix, index=image_names, columns=image_names)
 
 
