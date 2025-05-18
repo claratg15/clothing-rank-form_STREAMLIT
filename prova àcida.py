@@ -9,10 +9,10 @@ from streamlit_sortables import sort_items
 # Configuració de la pàgina
 st.set_page_config(layout="wide")
 
-# # Obtenir credencials de Dropbox des de secrets.toml
-# APP_KEY = st.secrets["dropbox"]["app_key"]
-# APP_SECRET = st.secrets["dropbox"]["app_secret"]
-# REFRESH_TOKEN = st.secrets["dropbox"]["refresh_token"]
+# Obtenir credencials de Dropbox des de secrets.toml
+APP_KEY = st.secrets["dropbox"]["app_key"]
+APP_SECRET = st.secrets["dropbox"]["app_secret"]
+REFRESH_TOKEN = st.secrets["dropbox"]["refresh_token"]
 
 # Funció per generar un access_token a partir del refresh_token
 def get_access_token():
