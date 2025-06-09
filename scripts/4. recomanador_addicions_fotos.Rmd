@@ -1,0 +1,972 @@
+---
+title: "Recommenders"
+author: "Clara Tarragó"
+date: '2025-04-28'
+output: html_document
+---
+
+
+# RECOMMENDERS
+
+Extracció característiques de les imatges amb autoencoders
+```{r}
+#library(reticulate)
+#tensorflow::tf$config$threading$set_inter_op_parallelism_threads(1)
+#tensorflow::tf$config$threading$set_intra_op_parallelism_threads(1)
+Sys.setenv("TF_DETERMINISTIC_OPS" = "1")  
+library(keras)
+library(ggplot2)
+set.seed(123)
+tensorflow::tf$random$set_seed(123)
+
+image_paths <- list.files("/Volumes/PHILIPS UFD/tfg/TFG/subset_100_images", full.names = TRUE)
+
+# Funció per carregar i preprocessar imatges
+load_and_preprocess_image <- function(image_path) {
+  img <- image_load(image_path, target_size = c(64, 64))      # redimensionem a 64x64 para reduir cost computacional
+  img_array <- image_to_array(img)
+  img_array <- img_array / 255       # normalitzem [0,1]
+  img_array
+}
+image_data <- lapply(image_paths, load_and_preprocess_image)
+image_data <- array_reshape(image_data, c(length(image_data), 64, 64, 3))
+
+encoder <- load_model_hdf5("encoder_model_3.h5")
+summary(encoder)
+
+image_features <- encoder %>% predict(image_data)
+```
+
+Similitud del cosinus
+```{r}
+# Funció per calcular la matriu amb les similituds del cosinus entre imatges
+cosine_similarity <- function(feature_matrix) {
+  # Normalizem les dades
+  norm <- sqrt(rowSums(feature_matrix^2))
+  normalized <- feature_matrix / norm
+  
+  sim_matrix <- tcrossprod(normalized)
+  return(sim_matrix)
+}
+
+# Ho apliquem als vectors de característiques de les 100 imatges
+cos_sim_matrix <- cosine_similarity(image_features)
+
+# Posem els noms de les imatges per identificar-les
+rownames(cos_sim_matrix) <- basename(image_paths)
+colnames(cos_sim_matrix) <- basename(image_paths)
+```
+
+
+Llegim i preparem les dades.
+```{r}
+dades_final2 <- readRDS("dades_final2.RData")
+colnames(dades_final2)[64:163] <- basename(image_paths)
+
+valoracions <- dades_final2[,56:163]
+
+# Gènere
+for(i in 1:dim(valoracions)[1]){
+  if(dades_final2[i,1] == "Home"){
+    valoracions[i,2] <- 1
+    valoracions[i,3] <- 0
+    valoracions[i,4] <- 0
+  }else if(dades_final2[i,1] == "Dona"){
+    valoracions[i,2] <- 0
+    valoracions[i,3] <- 1
+    valoracions[i,4] <- 0
+  }else{
+    valoracions[i,2] <- 0
+    valoracions[i,3] <- 0
+    valoracions[i,4] <- 1
+  }
+}
+colnames(valoracions)[2:4] <- c("Home", "Dona", "Altres")
+
+# Edat
+for(i in 1:dim(valoracions)[1]){
+  valoracions[i,5] <- dades_final2[i,2]
+}
+colnames(valoracions)[5] <- "Edat"
+
+# Preferència de compra
+for(i in 1:dim(valoracions)[1]){
+  if(dades_final2[i,3] == "Físicament en botiga"){
+    valoracions[i,6] <- 1
+    valoracions[i,7] <- 0
+    valoracions[i,8] <- 0
+  }else if(dades_final2[i,3] == "Online"){
+    valoracions[i,6] <- 0
+    valoracions[i,7] <- 1
+    valoracions[i,8] <- 0
+  }else{
+    valoracions[i,6] <- 0
+    valoracions[i,7] <- 0
+    valoracions[i,8] <- 1
+  }
+}
+colnames(valoracions)[6:8] <- c("Físicament en botiga", "Online", "Ambdues opcions")
+
+
+valoracions[,1] <- rep(1:108)
+colnames(valoracions)[1] <- c("usuari")
+
+
+head(valoracions)
+
+write.csv(valoracions, file = "valoracions.csv", row.names = FALSE)
+```
+
+
+```{r}
+atributs <- readRDS("descriptiva_img.RData")
+atributs$ID_foto <- basename(image_paths)
+
+atributs2 <- matrix(nrow = 100, ncol = (1+2+length(unique(atributs$Color))+2+3+1+length(unique(atributs$`Tipus prenda`))))
+atributs2 <- as.data.frame(atributs2)
+
+atributs2[,1] <- atributs$ID_foto
+colnames(atributs2)[1] <- "imatge"
+
+for(i in 1:dim(atributs2)[1]){
+  
+  # Marca
+  if(atributs[i,2] == "Sense marca visible"){
+    atributs2[i,2] <- 0
+    atributs2[i,3] <- 1
+  }else{
+    atributs2[i,2] <- 1
+    atributs2[i,3] <- 0
+  }
+  colnames(atributs2)[2:3] <- c("Marca visible", "Marca no visible")
+  
+  # Color
+  if(atributs[i,3] == "Beige"){
+    atributs2[i,4] <- 1
+    atributs2[i,5:13] <- 0
+  }else if(atributs[i,3] == "Blanc"){
+    atributs2[i,4] <- 0
+    atributs2[i,5] <- 1
+    atributs2[i,6:13] <- 0
+  }else if(atributs[i,3] == "Blau"){
+    atributs2[i,4:5] <- 0
+    atributs2[i,6] <- 1
+    atributs2[i,7:13] <- 0
+  }else if(atributs[i,3] == "Gris"){
+    atributs2[i,4:6] <- 0
+    atributs2[i,7] <- 1
+    atributs2[i,8:13] <- 0
+  }else if(atributs[i,3] == "Marró"){
+    atributs2[i,4:7] <- 0
+    atributs2[i,8] <- 1
+    atributs2[i,9:13] <- 0
+  }else if(atributs[i,3] == "Negre"){
+    atributs2[i,4:8] <- 0
+    atributs2[i,9] <- 1
+    atributs2[i,10:13] <- 0
+  }else if(atributs[i,3] == "Rosa"){
+    atributs2[i,4:9] <- 0
+    atributs2[i,10] <- 1
+    atributs2[i,11:13] <- 0
+  }else if(atributs[i,3] == "Taronja"){
+    atributs2[i,4:10] <- 0
+    atributs2[i,11] <- 1
+    atributs2[i,12:13] <- 0
+  }else if(atributs[i,3] == "Verd"){
+    atributs2[i,4:11] <- 0
+    atributs2[i,12] <- 1
+    atributs2[i,13] <- 0
+  }else if(atributs[i,3] == "Vermell"){
+    atributs2[i,4:12] <- 0
+    atributs2[i,13] <- 1
+  }
+  colnames(atributs2)[4:13] <- c("Beige", "Blanc", "Blau","Gris", "Marró", "Negre", "Rosa", "Taronja", "Verd", "Vermell")
+  
+  # Estampat
+  if(atributs[i,4] == "Llis"){
+    atributs2[i,14] <- 1
+    atributs2[i,15] <- 0
+  }else{
+    atributs2[i,14] <- 0
+    atributs2[i,15] <- 1
+  }
+  colnames(atributs2)[14:15] <- c("Llis", "Estampat")
+  
+  # Gènere model
+  if(atributs[i,5] == "Home"){
+    atributs2[i,16] <- 1
+    atributs2[i,17:18] <- 0
+  }else if (atributs[i,5] == "Dona"){
+    atributs2[i,16] <- 0
+    atributs2[i,17] <- 1
+    atributs2[i,18] <- 0
+  }else{
+    atributs2[i,16:17] <- 0
+    atributs2[i,18] <- 1
+  }
+  colnames(atributs2)[16:18] <- c("Home", "Dona", "Sense model")
+  
+  # Edat model
+  if(atributs[i,6] == "Sense model"){
+    atributs2[i,19] <- NA
+  }else{
+    atributs2[i,19] <- atributs[i,6]
+  }
+  colnames(atributs2)[19] <- "Edat_model"
+  
+  # Tipus prenda
+  if(atributs[i,7] == "Samarreta màniga curta"){
+    atributs2[i,20] <- 1
+    atributs2[i,21:23] <- 0
+  }else if(atributs[i,7] == "Samarreta màniga llarga"){
+    atributs2[i,20] <- 0
+    atributs2[i,21] <- 1
+    atributs2[i,22:23] <- 0
+  }else if(atributs[i,7] == "Dessuadora"){
+    atributs2[i,20:21] <- 0
+    atributs2[i,22] <- 1
+    atributs2[i,23] <- 0
+  }else{
+    atributs2[i,20:22] <- 0
+    atributs2[i,23] <- 1
+  }
+  colnames(atributs2)[20:23] <- c("Samarreta màniga curta", "Samarreta màniga llarga", "Dessuadora", "Dessuadora amb caputxa")
+}
+
+write.csv(atributs2, file = "atributs.csv", row.names = FALSE)
+```
+
+
+
+# 1. MEMORY-BASED
+
+Preparem les dades de valoracions.
+```{r}
+library(tidyverse)
+
+demografics <- valoracions[, c("usuari", "Home", "Dona", "Altres", "Edat", "Físicament en botiga", "Online", "Ambdues opcions")]
+
+valoracions_tidy <- valoracions %>% gather(key = "imatge", value = "rànquing", -c("usuari", "Home", "Dona", "Altres", "Edat", "Físicament en botiga", "Online", "Ambdues opcions"))
+# agrupem les dades. crea una nova variable anomenada "imatge" que tindrà els noms de totes les columnes que indiquem (en el nostre cas totes menys les demogràfiques, és a dir, tindrà els noms de les imatges)
+
+head(valoracions_tidy)
+```
+
+
+Una mica de descriptiva
+
+Gràfic dels rànquings per usuari-imatge. Cada fila del gràfic és una imatge, cada columna un usuari. El color del requadre indica el rànquing en què l'usuari $i$ ha col·locat la imatge $j$.
+```{r}
+valoracions_tidy %>% filter(!is.na(rànquing)) %>% ggplot(aes(x = usuari, y = imatge, fill = rànquing)) + geom_tile(color = "black") + theme_bw() + theme(axis.text = element_blank(), axis.ticks = element_blank())
+```
+
+
+Càlcul del % de NAs i nº de respostes x individu (per comprovar que sigui com s'esperava)
+```{r}
+# % NAs
+total_NA <- valoracions %>% select(9:108) %>% map_dbl(.f = function(x){ sum(is.na(x))}) %>% reduce(.f = sum)
+# map_dbl: per aplicar una funció a cada element d'un vector. suma quants NAs hi ha a cada columna, i després amb reduce() suma tots els valors del vector resultant, tornant el total del NAs al dataset.
+total_elements <- (ncol(valoracions) - 8) * (nrow(valoracions))
+(percentatge_NA   <- 100 * (total_NA / total_elements))
+
+# nº respostes x individu
+valoracions_tidy %>% filter(!is.na(rànquing)) %>% group_by(usuari) %>% count() %>% pull(n) # %>% median()
+# agafem nomes aquelles dades sense NA, agrupem per usuari, i comptem quantes n'hi ha. podríem fer la mediana també, però així veiem que TOTS tenen 10 respostes.
+```
+% total de NAs = 90% i nº respostes x individu = 10
+
+
+
+Normalització variables rànquing, Edat client i Edat model
+```{r}
+valoracions_tidy$rànquing <- as.numeric(valoracions_tidy$rànquing)
+valoracions_tidy$Edat <- as.numeric(valoracions_tidy$Edat)
+atributs2$Edat_model <- as.numeric(atributs2$Edat_model)
+
+## Normalització Z-score 
+valoracions_tidy_norm <- valoracions_tidy %>% group_by(usuari) %>% mutate(rànquing = scale(rànquing, center=T,scale=T)) %>% ungroup()
+valoracions_tidy_norm <- valoracions_tidy_norm %>% mutate(Edat = scale(Edat, center=T,scale=T)) 
+atributs2_norm <- atributs2 %>% mutate(Edat_model = scale(Edat_model, center=T,scale=T))
+
+## Comparem:
+valoracions_tidy_norm
+valoracions_tidy
+```
+Com més proper a 1 estigui el valor, més avall del rànquing està la imatge. 
+
+
+## 1.1. USER-BASED
+
+Fonamentalment és un sistema de filtratge col·laboratiu basat en usuaris, millorat amb característiques del perfil de l'usuari. Aquesta millora fa que el sistema sigui més robust, sobretot tenint en compte l'escasseig de dades, ja que tenim un 90% de NAs.
+
+**Primer pas**: calcular la similitud entre l'usuari escollit i la resta d'usuaris.
+```{r}
+set.seed(222)
+usuari_escollit <- 1 
+
+## MATRIU USUARI-ÍTEM
+valoracions_usuaris <- valoracions_tidy_norm %>% select(usuari, imatge, rànquing) %>% spread(key = usuari, value = rànquing, fill = NA)
+head(valoracions_usuaris)
+
+## Dades demogràfiques apart
+demografics <- valoracions_tidy_norm %>% select(usuari, Edat, Home, Dona, Altres, `Físicament en botiga`, Online, `Ambdues opcions`) %>% distinct() 
+head(demografics)
+
+## Funció per calcular la similitud. y serà l'usuari escollit
+correlacio_func_combined <- function(usuari_x, usuari_y, ranquings_data, demo_data) {
+  
+  sim_finals <- data.frame(usuari = usuari_x, similitud = rep(NA, length(usuari_x)))
+  
+  for(t in 1:length(usuari_x)){
+    
+    # 1. Similitud per rànquings
+    ranquings_x <- ranquings_data[[as.character(usuari_x[t])]]
+    ranquings_y <- ranquings_data[[as.character(usuari_y)]]
+    sim_ranquings <- cor(ranquings_x, ranquings_y, use = "na.or.complete", method = "pearson")
+    
+    if (is.na(sim_ranquings)){
+      sim_ranquings <- 0
+    }
+    
+    # 2. Similitud per edat
+    demo_x <- demo_data %>% filter(usuari == usuari_x[t])
+    demo_y <- demo_data %>% filter(usuari == usuari_y)
+    
+    sim_edat <- 1 - abs(demo_x$Edat - demo_y$Edat)
+    # com més properes siguin les edats, més a prop de l'1 estarà la similitud
+    
+    # 3. Similitud per altres variables categòriques
+    sim_home <- as.numeric(demo_x$Home == demo_y$Home)
+    sim_dona <- as.numeric(demo_x$Dona == demo_y$Dona)
+    sim_altres <- as.numeric(demo_x$Altres == demo_y$Altres)
+    sim_fisicament <- as.numeric(demo_x$`Físicament en botiga` == demo_y$`Físicament en botiga`)
+    sim_online <- as.numeric(demo_x$Online == demo_y$Online)
+    sim_ambdues <- as.numeric(demo_x$`Ambdues opcions` == demo_y$`Ambdues opcions`)
+    
+    # Mitjana de quants d'aquests valors coincideixen, i la similitud de l'edat.
+    demo_sims <- c(sim_edat, sim_home, sim_dona, sim_altres, sim_fisicament, sim_online, sim_ambdues)
+    sim_demo <- mean(demo_sims, na.rm = TRUE)
+    
+    # 3. Combinem les similituds amb pesos
+    pes_rkgs <- 0.6
+    pes_demo <- 0.4
+    sim_total <- (pes_rkgs * sim_ranquings) + (pes_demo * sim_demo)
+    
+    sim_finals[t,2] <- sim_total
+  }
+  return(sim_finals)
+}
+
+resta_usuaris <- setdiff(names(valoracions_usuaris)[-1], as.character(usuari_escollit)) 
+# que no agafi el propi usuari escollit, ja que òbviament tindrà una correlació = 1
+
+## Càlcul similitud entre usuaris (columnes)
+(similitud_usuaris <- correlacio_func_combined(resta_usuaris, usuari_escollit, valoracions_usuaris, demografics))
+```
+
+
+**Segon pas**: identificar les 90 imatges de peces de roba que l'usuari escollit no ha vist a l'enquesta interactiva. No volem recomanar-li peces que ja hagi vist.
+```{r}
+## 90 imatges no vistes
+roba_no_vista <- valoracions_tidy_norm %>% filter(usuari == (usuari_escollit) & is.na(rànquing)) %>% pull(imatge)
+```
+
+
+**Tercer pas**: 
+- seleccionem els top-k individus més semblants a l'usuari escollit (k òptima a trobar per validació creuada), que tinguin una similitud positiva (una negativa indicaria que tenen preferències oposades) i que SÍ hagin vist la imatge de la peça de roba $p$
+- calculem la mitjana ponderada dels rànquings en què cadascun d'aquests top-k individus ha posat la peça de roba $p$. Així obtenim una estimació del rànquing que hauria donat l'usuari escollit a la peça de roba $p$.
+
+Comencem trobant el nº òptim a agafar d'usuaris semblants a l'usuari escollit, per validació creuada.
+```{r}
+library(dplyr)
+library(purrr)
+library(Metrics)
+library(tibble)
+
+## Funcions per fer cross-validació
+predict_for_test <- function(train, test, similitud_usuaris, k) {
+  
+  predictions <- map2_dfr(test$usuari, test$imatge, function(u, img) {
+    # agafem l'usuari i una de les imatges (que tingui assignat el fold f) del conjunt de test
+    
+    usuaris_imatge_i <- train %>% filter(imatge == img, !is.na(rànquing)) %>% pull(usuari)
+    # agafem els usuaris del conjunt de train que han vist i ranquejat la imatge seleccionada.
+    
+    if (length(usuaris_imatge_i) < 5){
+      return(NULL)
+    } 
+    # que com a mínim tinguem 5 usuaris que hagin vist la imatge.
+
+    top_usuaris <- similitud_usuaris %>% filter(similitud >= 0, usuari %in% usuaris_imatge_i) %>% arrange(desc(similitud)) %>% head(k)
+    # agafem els usuaris QUE HAN VIST I RANQUEJAT LA IMATGE i que tenen una SIMILITUD superior a 0 amb l'usuari escollit, ordenats de major a menor similitud.
+    
+    if (nrow(top_usuaris) < 3){
+      return(NULL)
+    }
+    # que com a mínim tinguem 3 usuaris SIMILARS que hagin vist la imatge
+
+    valoracions_top <- train %>% filter(imatge == img, usuari %in% top_usuaris$usuari)
+    # agafem els rànquings de la imatge, dels usuaris més similars que han vist la imatge
+
+    top_usuaris <- left_join(top_usuaris, valoracions_top, by = "usuari")
+    # a la matriu amb els usuaris similars i la seva corresponent similitud, hi afegim el rànquing que han donat a la imatge amb la que estem treballant.
+
+    pred <- sum(top_usuaris$similitud * top_usuaris$rànquing, na.rm = TRUE) / sum(top_usuaris$similitud, na.rm = TRUE)
+    # predicció del rànquing en què l'usuari escollit posaria la imatge amb la que treballem, en funció dels rànquings en què han posat aquesta imatge els individus similars a l'usuari escollit. es dona més pes als individus més similars a l'individu escollit (mitjana ponderada)
+    
+    real <- test %>% filter(usuari == u, imatge == img) %>% pull(rànquing)
+    # agafem el rànquing real que va donar l'usuari escollit a la imatge amb la que hem treballat
+
+    if (length(real) == 0 || is.na(pred)){
+      pred <- 0
+    } 
+    # si pel que fós o no hi ha 5 usuaris que hagin vist la imatge, o no hi ha 3 usuaris SIMILARS que hagin vist la imatge, fent que la predicció fos nul·la, que retorni un 0 a la predicció: ni bé ni malament
+
+    tibble(real = real, pred = pred)
+    # taula amb la predicció real i la predita, per cada una de les imatges
+  })
+  
+  return(predictions)
+}
+
+
+cross_validate_k_user <- function(valoracions_tidy_norm, similitud_usuaris, usuari_objectiu, k_values = 1:15, folds = 5) {
+  
+  user_data <- valoracions_tidy_norm %>% filter(usuari == (usuari_objectiu), !is.na(rànquing)) %>% mutate(fold = sample(rep(1:folds, length.out = n())))
+  # agafem les dades de rànquings de l'usuari escollit (imatges ranquejades). crea una nova columna "fold" en la que assigna aleatòriament de 1  a 5 un fold a cada dada que tenim de rànquings de l'usuari (10 rànquings)
+
+  all_train_data <- valoracions_tidy_norm %>% filter(usuari != (usuari_objectiu))
+  # com a dades de train agafem les dades de tots els usuaris MENYS l'escollit.
+
+  map_dfr(k_values, function(k) {
+    fold_rmse <- map_dbl(1:folds, function(f) {
+      test <- user_data %>% filter(fold == f) 
+      train_ratings <- user_data %>% filter(fold != f)
+      train <- bind_rows(all_train_data, train_ratings)
+
+      preds <- predict_for_test(train, test, similitud_usuaris, k)
+      if (nrow(preds) == 0) return(NA)
+      # si preds està buit, retorna NA. a l'utilitzar la funció return ja s'acaba tot i no executa l'rmse
+      rmse(preds$real, preds$pred)
+    })
+
+    tibble(k = k, rmse = mean(fold_rmse, na.rm = TRUE))
+  })
+  # per cada k de 1 a 15, i per cada fold de 1 a 5: 
+  #   · test: GRUP DE TEST DE L'USUARI. agafem les dades de l'usuari escollit i del fold corresponent
+  #   · train_ratings: agafem la resta de dades de l'usuari escollit que NO són del fold corresponent
+  #   · train: GRUP DE TRAIN DE L'USUARI. ajuntem les dades de l'usuari que NO són del fold corresponent i les dades de la resta d'usuaris.
+  
+  # aplica la funció predict_for_test amb les dades de TRAIN i TEST, i la k corresponent. si hi ha prediccions vàlides, calcula el RMSE. si no, retorna NA. a l'utilitzar la funció return ja s'acaba tot i no executa l'rmse
+  
+  # un cop fetes totes les iteracions (una per cada k i per cada fold), calcula la mitjana de rmse dels folds de cada k i ho retorna en una taula
+}
+
+
+## Apliquem la cross-validació
+valoracions_tidy_norm$usuari <- as.character(valoracions_tidy_norm$usuari)
+resultats_k_user <- cross_validate_k_user(valoracions_tidy_norm, similitud_usuaris, usuari_escollit)
+best_k <- resultats_k_user %>% filter(rmse == min(rmse, na.rm = TRUE)) %>% pull(k) %>% .[1]
+
+
+## Gràfic RMSE vs. k
+plot(resultats_k_user$k, resultats_k_user$rmse, type = "b", xlab = "k", ylab = "RMSE", main = "Nº de veïns (k) vs RMSE del model", col = "skyblue3", pch = 19)
+
+cat("La k òptima per l'usuari", usuari_escollit, "és: k =", best_k, "\n")
+```
+
+
+Calculem la mitjana ponderada dels rànquings en què cadascun d'aquests top-k individus ha posat la peça de roba $p$. Així obtenim una estimació del rànquing que hauria donat l'usuari escollit a la peça de roba $p$. Pràcticament mateix esquema que la funció predict_for_test(), per la validació creuada.
+```{r}
+prediccio_rkg <- rep(NA, length(roba_no_vista))
+imatge <- rep(NA, length(roba_no_vista))
+n_obs_prediccio <- rep(NA, length(roba_no_vista))
+
+for(i in seq_along(roba_no_vista)){
+  
+  usuaris_imatge_i <- valoracions_tidy_norm %>% filter(imatge == roba_no_vista[i] & !is.na(rànquing)) %>% pull(usuari)
+  # usuaris que han vist la imatge i  
+
+  if (length(usuaris_imatge_i) < 5){
+    next()
+  }
+  # si no hi ha un mínim de 5 usuaris que han vist la imatge, no es considera una estimació prou bona.
+
+  top_usuaris <- similitud_usuaris %>% filter(similitud >= 0 & (usuari %in% usuaris_imatge_i)) %>% arrange(desc(similitud)) %>%  head(best_k)       #!! k: validació creuada
+  # agafem els top-k usuaris QUE HAN VIST I RANQUEJAT LA IMATGE i que tenen una SIMILITUD superior a 0 amb l'usuari escollit, ordenats de major a menor similitud.
+  
+  if (nrow(top_usuaris) < 3){
+    next()
+  }
+  # si no hi ha un mínim de 3 usuaris amb valoracions vàlides, no es considera una estimació prou bona. Passaríem a la següent imatge.               
+  
+  valoracions_top <- valoracions_tidy_norm %>% filter(imatge == roba_no_vista[i] & usuari %in% top_usuaris$usuari)
+  valoracions_top$usuari <- as.character(valoracions_top$usuari)
+  # rànquings d'aquests top-k usuaris sobre la imatge i
+  
+  top_usuaris <- top_usuaris %>% left_join(valoracions_top, by = "usuari")
+  # a la matriu amb els top-k usuaris similars i la seva corresponent similitud, hi afegim el rànquing que han donat a la imatge amb la que estem treballant.
+  
+  ## Vectors per guardar informació
+  prediccio_rkg[i] <- sum(top_usuaris$similitud * top_usuaris$rànquing) / sum(top_usuaris$similitud)
+   # predicció del rànquing en què l'usuari escollit posaria la imatge amb la que treballem, en funció dels rànquings en què han posat aquesta imatge els top-k individus similars a l'usuari escollit. es dona més pes als individus més similars a l'individu escollit (mitjana ponderada)
+  
+  imatge[i] <- roba_no_vista[i]
+  n_obs_prediccio[i] <- nrow(top_usuaris)
+}
+```
+
+
+**Quart pas**: recomanem les 10 peces de roba que tinguin una mitjana ponderada inferior (volem posicions elevades al rànquing, que es tradueix en valors petits, al tenir les dades normlitzades). 
+```{r}
+(top10_recomanacions_ub <- data.frame(imatge, prediccio_rkg, n_obs_prediccio) %>% arrange(prediccio_rkg) %>% head(10))
+
+ggplot(data = top10_recomanacions_ub, aes(x = reorder(imatge, -prediccio_rkg), y = prediccio_rkg)) + geom_col(fill="skyblue3") + coord_flip() + labs(x = "Peça de roba recomanada") + theme_minimal()
+```
+Normalització rànquings: 
+```{r}
+a <- c(1,2,3,4,5,6,7,8,9,10)
+(1-mean(a))/sd(a)
+(10-mean(a))/sd(a)
+```
+Com més proper a -1,48 sigui el valor, més bona posició al rànquing és. Per això al gràfic ens torna valors negatius.
+
+
+
+## 1.2. ITEM-BASED
+
+És un recomanador híbrid: item-based i basat en contingut.
+
+**Primer pas**: identificar les 90 imatges de peces de roba que l'usuari escollit no ha vist a l'enquesta interactiva. No volem recomanar-li peces que ja hagi vist.
+
+```{r}
+set.seed(222)
+usuari_escollit <- 1  
+
+## MATRIU USUARI-ÍTEM (en aquest cas tenim usuaris com a files i imatges com a columnes)
+valoracions_usuaris <- valoracions_tidy_norm %>% spread(key = imatge, value = rànquing, fill = NA)
+# ampliem el format de les dades. amb key establim els noms de les columnes, i amb value i fill li diem que a les cel·les posi el valor del rànquing, i que si no n'hi ha, posi NA. l'altre columna de valoracions_tidy_norm, imatge, serà una única columna, no tindrem una columna per imatge. Per tant, cada columna a partir de la 2 és la valoració d'un usuari
+
+## Imatges no vistes per l'usuari escollit
+roba_no_vista <- valoracions_tidy_norm %>% filter(usuari == (usuari_escollit) & is.na(rànquing)) %>% pull(imatge)
+
+roba_vista <- valoracions_tidy_norm %>% filter(usuari == (usuari_escollit) & !is.na(rànquing)) %>% pull(imatge)
+```
+
+
+**Segon pas**: 
+- calcular la similitud entre cada imatge $p$ no vista i les 10 imatges que sí ha vist l'usuari, mitjançant els vectors dels seus rànquings.
+- escollir, per validació creuada, les top-k peces de roba més similars que l'usuari sí hagi vist.
+- calcular la mitjana ponderada dels rànquings d'aquestes top-k imatges
+
+Calculem la similitud entre la imatge $p$ no vista i les 10 imatges sí vistes, per cadascuna de les 90 imatges no vistes.
+```{r, warning = FALSE}
+## Funció per calcular la similitud
+item_similarity_combined <- function(imatge1, imatge2, ranquings_data, attr_data) {
+  
+  # 1. Similitud per rànquings
+  ranquings_x <- ranquings_data[[imatge1]]
+  ranquings_y <- ranquings_data[[imatge2]]
+  sim_ranquings <- cor(ranquings_x, ranquings_y, use = "na.or.complete", method = "pearson")
+  
+  if (is.na(sim_ranquings)){
+    sim_ranquings <- 0
+  }  
+  
+  # 2. Similitud per edat
+  attr_x <- attr_data %>% filter(imatge == imatge1)
+  attr_y <- attr_data %>% filter(imatge == imatge2)
+  
+  if ("Edat_model" %in% names(attr_data)) {
+    sim_edat_model <- 1 - abs(attr_x$Edat_model - attr_y$Edat_model)
+  } else {
+    sim_edat_model <- NA
+  }
+  # com més properes siguin les edats, més a prop de l'1 estarà la similitud
+  
+  # 3. Similitud per altres variables categòriques
+  columnes_cat <- names(attr_data)[grepl("^(Marca visible|Marca no visible|Beige|Blanc|Blau|Gris|Marró|Negre|Rosa|Taronja|Verd|Vermell|Llis|Estampat|Home|Dona|Sense model|Samarreta màniga curta|Samarreta màniga llarga|Dessuadora|Dessuadora amb caputxa)$", names(attr_data))]
+  sim_cat <- sum(attr_x[columnes_cat] == attr_y[columnes_cat], na.rm = TRUE) / length(columnes_cat)
+
+  # 4. Similitud per imatges
+  cos_sim_img <- cos_sim_matrix[imatge1, imatge2]
+  
+  # Mitjana de quants d'aquests valors coincideixen, i la similitud de l'edat.
+  attr_sims <- c(sim_edat_model, sim_cat)
+  sim_attr <- mean(attr_sims, na.rm = TRUE)
+  
+  # Combinem les similituds amb pesos
+  pesos_rkgs <- 0.5 
+  pesos_attr <- 0.25 
+  pesos_img <- 0.25
+  sim_combinat <- (pesos_rkgs * sim_ranquings) + (pesos_attr * sim_attr) + (pesos_img*cos_sim_img)
+  
+  return(sim_combinat)
+}
+
+# Grid amb totes les comparacions a fer
+comparacions <- expand.grid(roba_no_vista, roba_vista, stringsAsFactors = FALSE)
+colnames(comparacions) <- c("roba_no_vista", "roba_vista")
+
+comparacions <- comparacions %>% mutate(similitud = map2_dbl(.x = roba_no_vista, .y = roba_vista, .f = ~ item_similarity_combined(imatge1 = .x, imatge2 = .y, ranquings_data = valoracions_usuaris, attr_data = atributs2_norm)))
+```
+
+Trobem el nº òptim a agafar de les 10 imatges que l'usuari ha vist, segons la seva similitud amb la imatge $p$, per validació creuada. 
+```{r, warning = FALSE}
+set.seed(222)
+## Cross-validació
+roba_validacio <- sample(roba_vista, 3)   # test. 3 imatges de 10 per fer 70-30 (80-20 em sembla massa poc test)
+roba_entrenament <- setdiff(roba_vista, roba_validacio)
+# les dades són les imatges vistes per l'usuari
+
+rangs_k <- 1:10       # podem agafar entre 1 i 10 imatges (màxim 10 perquè l'individu no n'ha ranquejat més)
+resultats_k <- data.frame(k = rangs_k, rmse = NA)
+
+for (k in rangs_k) {
+  prediccions <- c()
+  reals <- c()
+  
+  for (roba in roba_validacio) {
+    similituds <- map_dbl(roba_entrenament, ~ item_similarity_combined(roba, .x, valoracions_usuaris, atributs2))
+    # per cada k, i per cada imatge de test, calculem la similitud entre la imatge de test i totes les de train.     és com si supossessim que les de test NO les ha vist l'usuari.
+    
+    similituds_df <- data.frame(roba_vista = roba_entrenament, similitud = similituds) %>% filter(similitud > 0) %>% top_n(n = k, wt = similitud)
+    # dataframe amb les similituds entre la roba de train i la imatge de test amb la que estem. mostrem les top-k imatges amb una similitud positiva
+    
+    valoracions_usuari <- valoracions_tidy_norm %>% filter(usuari == (usuari_escollit), imatge %in% similituds_df$roba_vista) %>% select(imatge, rànquing)
+    # agafem les valoracions reals que ha fet l'usuari escollit per les top-k imatges que tenim de train amb una similitud  positiva, trobades a la línia de codi anterior
+    
+    df <- similituds_df %>% left_join(valoracions_usuari, by = c("roba_vista" = "imatge"))
+    # ajunta les dades de les top-k imatges de train amb similitud > 0, la seva similitud amb la imatge de test i el rànquing real que els ha donat l'usuari escollit
+    
+    if (nrow(df) >= 2) {
+      pred <- sum(df$rànquing * df$similitud) / sum(df$similitud)
+      # agafa el rànquing de les top-k imatges més similars i en fa la mitjana ponderada segons la seva similitud amb la imatge de test amb la que estem treballant, per predir el rànquing de la imatge de test que en faria l'usuari escollit
+      real <- valoracions_tidy_norm %>% filter(usuari == (usuari_escollit), imatge == roba) %>% pull(rànquing)
+      # agafa el rànquing real que ha donat l'usuari a la imatge de test
+      
+      ## Vectors per guardar resultats
+      prediccions <- c(prediccions, pred)
+      reals <- c(reals, real)
+    }
+  }
+  resultats_k$rmse[resultats_k$k == k] <- rmse(reals, prediccions)
+  # calculem l'RMSE total de les 3 imatges de test amb les que s'han fet prediccions
+}
+
+
+## Gràfic RMSE vs. k
+plot(resultats_k$k, resultats_k$rmse, type = "b", xlab = "k", ylab = "RMSE", main = "Valor de k vs RMSE del model", col = "skyblue3", pch = 19)
+
+best_k <- resultats_k %>% arrange(rmse) %>% slice(1) %>% pull(k)
+cat("La k òptima trobada per cross-validació és: k =", best_k, "\n")
+```
+Agafarem k imatges de les 10 que ha ranquejat l'individu més semblants a cadascuna de les p imatges no vistes.
+
+
+Calculem la mitjana ponderada dels rànquings d'aquestes top-k imatges, per predir el rànquing de cada imatge $p$ no vista.
+```{r, warning = FALSE}
+comparacions <- comparacions %>% filter(similitud > 0) %>% group_by(roba_no_vista) %>% top_n(n = best_k, wt = similitud) %>% arrange(roba_no_vista, desc(similitud))
+# per cada imatge no vista, es filtren les k imatges més semblants amb una similitud major a 0.
+
+valoracions_user_escollit <- valoracions_tidy_norm %>% filter(usuari == (usuari_escollit) & !is.na(rànquing))
+comparacions <-  comparacions %>% left_join(y = valoracions_user_escollit, by = c("roba_vista"  = "imatge"))
+# afegim el rànquing de l'usuari escollit per cada imatge
+
+## Mitjana ponderada dels rànquings per imatge
+mitjana_ponderada <- function(df){
+  resultat <- sum(df$rànquing * df$similitud) / sum(df$similitud)
+  return(resultat)
+}
+```
+
+
+**Quart pas**: recomanem les 10 peces de roba que tinguin una mitjana ponderada inferior (volem posicions elevades al rànquing, que es tradueix en valors petits, al tenir les dades normlitzades). 
+```{r, warning = FALSE}
+(top10_recomanacions_ib <- comparacions %>% group_by(roba_no_vista) %>% nest() %>% mutate(prediccio = map_dbl(.x = data, .f = mitjana_ponderada)) %>% select(-data) %>% arrange(prediccio) %>% head(10))
+# predicció del rànquing en què l'usuari escollit posaria cada imatge no vista, en funció dels rànquings en què han posat les top-k imatges que sí ha vist més similars (mitjana ponderada)
+
+ggplot(data = top10_recomanacions_ib, aes(x = reorder(roba_no_vista, -prediccio), y = prediccio)) + geom_col(fill="skyblue3") + coord_flip() + labs(x = "Peça de roba recomanada") + theme_minimal()
+```
+
+
+
+# 2. MODEL-BASED
+
+```{r}
+# library(data.table)
+# library(ggplot2)
+# library(dplyr)
+# library(recommenderlab)
+# library(caret)
+# library(tidyr)
+# library(tidyverse)
+
+detach("package:keras", unload = TRUE)
+
+library(Matrix)
+
+library(data.table)
+library(ggplot2)
+library(dplyr)
+library(caret)
+library(tidyr)
+```
+
+
+## 2.1. SVD
+
+```{r}
+library(recommenderlab)
+set.seed(222)
+
+df <- valoracions
+setDT(df)
+
+ranking_matrix <- as.matrix(df[, -1], with = FALSE)     # ho convertim en una matriu, eliminant la columna usuari
+
+ranking_matrix <- apply(ranking_matrix, 2, as.numeric)
+rownames(ranking_matrix) <- df$usuari
+# ho passem a numèric i posem que l'id de cada usuari siguin els noms de les files
+
+rating_matrix_aux <- apply(ranking_matrix[,8:107], 2, function(x) 11 - as.numeric(x))
+# per a que el model ho processi com puntuacions, transformem els rànquings.
+
+prova <- normalize(as(rating_matrix_aux, "realRatingMatrix"), method = "Z-score")
+# normalitzem els ratings per z-score
+
+prova <- as(prova, "matrix")
+rrm <- as(prova, "realRatingMatrix")
+# ho convertim en format realRatingMatrix
+rrm_filtered <- rrm
+
+## Separació train i test
+scheme <- evaluationScheme(rrm_filtered, method = "split", train = 0.8, given = -1)
+train_rrm <- getData(scheme, "train")
+test_rrm <- getData(scheme, "known")
+
+## Cross-validació
+k_values <- c(5, 10, 15, 20)  
+eval_scheme <- evaluationScheme(rrm_filtered, method = "cross-validation", k = 5, given = -1)
+eval_results <- list()
+for (k in k_values) {
+  cat("Avaluant k =", k, "\n")
+  # Avaluem el model SVD per al valor actual de k
+  result <- evaluate(eval_scheme, method = "SVD", parameter = list(k = k, normalize = NULL), type = "ratings", progress = TRUE)
+  eval_results[[as.character(k)]] <- result
+}
+
+# Obtenim l'RMSE per cada k
+# extracció rmse's: eval_results[[1]]@results[[5]]@cm[1]
+rmse_results <- matrix(nrow=length(k_values), ncol=5)
+for(i in 1:length(k_values)){
+  for(j in 1:5){
+    rmse_results[i,j] <- eval_results[[i]]@results[[j]]@cm[1]
+  }
+}     # extraiem els RMSE per cada fold de cada k
+
+rmse_results_final <- data.frame(rmse = rep(NA, 4))
+rownames(rmse_results_final) <- c("10", "15", "20", "25")
+for(i in 1:length(k_values)){
+  rmse_results_final[i,1] <- mean(rmse_results[i,])
+
+}
+best_k <- k_values[which.min(rmse_results_final[[1]])]  
+# escollim la k amb el RMSE més baix
+cat("Millor valor de k:", best_k, "\n")
+
+## Entrenem el model
+svd_model <- Recommender(train_rrm, method = "SVD", parameter = list(k = best_k))  
+
+## Predim top 10 peces de roba pels usuaris de test
+pred_svd <- predict(svd_model, test_rrm, type = "topNList", n = 10, remove_known = TRUE)
+
+## Per un usuari concret
+user_id <- 1    
+user_escollit <- rrm_filtered[user_id, ]
+
+pred_user_escollit <- predict(svd_model, user_escollit, n = 10, remove_known = TRUE)
+recomanacions <- as(pred_user_escollit, "list")[[1]]
+
+top10_recomanacions_svd <- head(recomanacions, 10)
+top10_recomanacions_svd
+```
+
+
+## 2.2. ALS (Alternating Least Squares)
+
+```{r}
+set.seed(222)
+
+df <- valoracions
+setDT(df)
+
+ranking_matrix <- as.matrix(df[, -1], with = FALSE)  
+# ho convertim en una matriu, eliminant la columna usuari
+
+ranking_matrix <- apply(ranking_matrix, 2, as.numeric) 
+rownames(ranking_matrix) <- df$usuari
+# ho passem a numèric i posem que l'id de cada usuari siguin els noms de les files 
+
+rating_matrix_aux <- apply(ranking_matrix[,8:107], 2, function(x) 11 - as.numeric(x))
+# per a que el model ho processi com puntuacions, transformem els rànquings.
+
+prova <- normalize(as(rating_matrix_aux, "realRatingMatrix"), method = "Z-score")
+# normalitzem els ratings per z-score
+
+prova <- as(prova, "matrix")
+rrm <- as(prova, "realRatingMatrix")
+# ho convertim en format realRatingMatrix
+rrm_filtered <- rrm
+
+## Separació train i test
+scheme <- evaluationScheme(rrm_filtered, method = "split", train = 0.8, given = -1)
+train_rrm <- getData(scheme, "train")
+test_rrm <- getData(scheme, "known")
+
+
+## Cross-validació
+# Definim els rangs de valors per als paràmetres k i lambda
+k_values <- c(5, 10, 15, 20)  
+lambda_values <- c(0.01, 0.1, 1)  
+max_iterations <- 10
+
+eval_scheme <- evaluationScheme(rrm_filtered, method = "cross-validation", k = 5, given = -1)
+
+eval_results <- list()
+
+# Iterem sobre totes les combinacions de k i lambda
+for (k in k_values) {
+  for (lambda in lambda_values) {
+    param_key <- paste0("k=", k, "_lambda=", lambda)
+    cat("Avaluant", param_key, "\n")
+    # Avaluem el model ALS per a la combinació actual de k i lambda
+    result <- evaluate(eval_scheme, method = "ALS", parameter = list(n_factors = k, lambda = lambda, n_iterations = max_iterations, normalize = NULL), type = "ratings", progress = TRUE)
+    eval_results[[param_key]] <- result
+  }
+}
+
+
+# Obtenim l'RMSE per cada combinació de k i lambda
+# eval_results[[1]]@results[[5]]@cm[1]
+rmse_results <- matrix(nrow=length(k_values)*length(lambda_values), ncol=5)
+for(i in 1:nrow(rmse_results)){
+  for(j in 1:5){
+    rmse_results[i,j] <- eval_results[[i]]@results[[j]]@cm[1]
+  }
+}     # extraiem els RMSE per cada fold de cada k i lambda
+
+rmse_results_final <- data.frame(rmse = rep(NA, 12))
+rownames(rmse_results_final) <- c("k=5;lambda=0.01", "k=5;lambda=0.1", "k=5;lambda=1", "k=10;lambda=0.01", "k=10;lambda=0.1", "k=10;lambda=1", "k=15;lambda=0.01", "k=15;lambda=0.1", "k=15;lambda=1", "k=20;lambda=0.01", "k=20;lambda=0.1", "k=20;lambda=1")
+for(i in 1:(length(k_values)*length(lambda_values))){
+  rmse_results_final[i,1] <- mean(rmse_results[i,])
+
+}
+
+(millor_comb <- rownames(rmse_results_final)[which.min(rmse_results_final[[1]])])
+best_k <- as.numeric(sub(".*\\=(.*?)\\;.*", "\\1", millor_comb))
+best_lambda <- as.numeric(substring(millor_comb,12,nchar(millor_comb)))
+cat("Millor combinació de paràmetres:", "k =", best_k, ", lambda =", best_lambda, "\n")
+
+## Entrenem el model
+als_model <- Recommender(train_rrm, method = "ALS", parameter = list(n_factors = best_k, lambda = best_lambda, n_iterations = 10, normalize = NULL)) 
+
+## Predim top 10 peces de roba pels usuaris de test
+pred_als <- predict(als_model, test_rrm, type = "topNList", n = 10, remove_known = TRUE)
+
+## Per un usuari concret
+user_id <- 1  
+user_escollit <- rrm_filtered[user_id, ]
+
+pred_user_escollit <- predict(als_model, user_escollit, type = "topNList", n = 10, remove_known = TRUE)
+recomanacions <- as(pred_user_escollit, "list")[[1]]
+
+top10_recomanacions_als <- head(recomanacions, 10)
+top10_recomanacions_als
+```
+
+
+
+# En quantes recomanacions dins el top-10 coincideixen els mètodes?
+```{r}
+## User-based VS Item-based
+k <- 1
+igual <- c()
+for(i in 1:dim(as.data.frame(top10_recomanacions_ub)[1])[1]){
+  for(j in 1:dim(as.data.frame(top10_recomanacions_ib)[1])[1]){
+    if(as.data.frame(top10_recomanacions_ub)[i,1] == as.data.frame(top10_recomanacions_ib)[j,1]){
+      igual[k] <- as.data.frame(top10_recomanacions_ub)[i,1]
+        k <- k+1
+    }
+  }
+}
+igual
+
+## SVD VS ALS
+k <- 1
+igual2 <- c()
+for(i in 1:dim(as.data.frame(top10_recomanacions_svd)[1])[1]){
+  for(j in 1:dim(as.data.frame(top10_recomanacions_als)[1])[1]){
+    if(as.data.frame(top10_recomanacions_svd)[i,1] == as.data.frame(top10_recomanacions_als)[j,1]){
+      igual2[k] <- as.data.frame(top10_recomanacions_svd)[i,1]
+        k <- k+1
+    }
+  }
+}
+igual2
+
+## User-based VS SVD
+k <- 1
+igual3 <- c()
+for(i in 1:dim(as.data.frame(top10_recomanacions_ub)[1])[1]){
+  for(j in 1:dim(as.data.frame(top10_recomanacions_svd)[1])[1]){
+    if(as.data.frame(top10_recomanacions_ub)[i,1] == as.data.frame(top10_recomanacions_svd)[j,1]){
+      igual3[k] <- as.data.frame(top10_recomanacions_ub)[i,1]
+        k <- k+1
+    }
+  }
+}
+igual3
+
+
+## Item-based VS SVD
+k <- 1
+igual4 <- c()
+for(i in 1:dim(as.data.frame(top10_recomanacions_ib)[1])[1]){
+  for(j in 1:dim(as.data.frame(top10_recomanacions_svd)[1])[1]){
+    if(as.data.frame(top10_recomanacions_ib)[i,1] == as.data.frame(top10_recomanacions_svd)[j,1]){
+      igual4[k] <- as.data.frame(top10_recomanacions_ib)[i,1]
+        k <- k+1
+    }
+  }
+}
+igual4
+
+## User-based VS ALS
+k <- 1
+igual5 <- c()
+for(i in 1:dim(as.data.frame(top10_recomanacions_ub)[1])[1]){
+  for(j in 1:dim(as.data.frame(top10_recomanacions_als)[1])[1]){
+    if(as.data.frame(top10_recomanacions_ub)[i,1] == as.data.frame(top10_recomanacions_als)[j,1]){
+      igual5[k] <- as.data.frame(top10_recomanacions_ub)[i,1]
+        k <- k+1
+    }
+  }
+}
+igual5
+
+
+## Item-based VS ALS
+k <- 1
+igual6 <- c()
+for(i in 1:dim(as.data.frame(top10_recomanacions_ib)[1])[1]){
+  for(j in 1:dim(as.data.frame(top10_recomanacions_als)[1])[1]){
+    if(as.data.frame(top10_recomanacions_ib)[i,1] == as.data.frame(top10_recomanacions_als)[j,1]){
+      igual6[k] <- as.data.frame(top10_recomanacions_ib)[i,1]
+        k <- k+1
+    }
+  }
+}
+igual6
+```
+

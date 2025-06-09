@@ -1,0 +1,49 @@
+---
+title: "Comparacions models"
+author: "Clara Tarragó"
+date: '2025-06-08'
+output: html_document
+---
+
+Llegim les dades
+```{r}
+dades_similituds_inic <- readRDS("sims_inic_PROVA.RData")
+dades_similituds_mod <- readRDS("sims_mod.RData")
+
+# per verificar que les dades estiguin bé
+mean(dades_similituds_mod$similituds[dades_similituds_mod$metode == "ub"])
+```
+
+
+
+## COMPARACIÓ UB i IB versions inicials i híbrides
+```{r}
+## T-TEST
+
+t.test(dades_similituds_inic$similituds[dades_similituds_inic$metode == "ub_inic"], dades_similituds_mod$similituds[dades_similituds_mod$metode == "ub"], paired = TRUE, alternative = "less")
+
+t.test(dades_similituds_inic$similituds[dades_similituds_inic$metode == "ib_inic"], dades_similituds_mod$similituds[dades_similituds_mod$metode == "ib"], paired = TRUE, alternative = "less")
+```
+
+
+
+
+## COMPARACIÓ UB-híbrid, IB-híbrid, SVD i ALS
+```{r}
+# BLOCS
+library(agricolae)
+
+sims_ub <- dades_similituds_mod$similituds[dades_similituds_mod$metode == "ub"]
+sims_ib <- dades_similituds_mod$similituds[dades_similituds_mod$metode == "ib"]
+sims_svd <- dades_similituds_mod$similituds[dades_similituds_mod$metode == "svd"]
+sims_als <- dades_similituds_mod$similituds[dades_similituds_mod$metode == "als"]
+  
+dades_similituds <- data.frame(metode = rep(c("ub", "ib", "svd", "als"), each = 240), id = rep(c(1:15), each = 16, 4),similituds = c(sims_ub, sims_ib, sims_svd, sims_als))
+dades_similituds$metode_fact <- as.factor(dades_similituds$metode)
+lm <- aov(dades_similituds$similituds ~ dades_similituds$metode_fact + dades_similituds$id)
+anova(lm)
+
+HSD.test(lm, "dades_similituds$metode_fact", console = TRUE)
+```
+
+

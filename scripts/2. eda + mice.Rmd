@@ -1,0 +1,362 @@
+---
+title: "Anàlisi Exploratori Descriptiu + IMPUTACIÓ"
+author: "Clara Tarragó"
+date: '2025-04-25'
+output: html_document
+---
+
+
+Llegim les dades
+```{r}
+dades_final <- readRDS("dades_final1.RData")
+```
+
+Comprovació ràpida que tots els enquestat tinguin 10 imatges rankejades
+```{r}
+ok <- c()
+cont <- 0
+for(i in 1:dim(dades_final)[1]){
+  for(j in 64:163){
+    if(!is.na(dades_final[i,j])){
+      cont <- cont + 1
+    }
+  }
+  if(cont == 10){
+    ok <- c(ok, "ok")
+  }else{
+    ok <- c(ok, "error")
+  }
+  cont <- 0
+}
+length(ok) == 108
+```
+
+
+
+## UNIVARIANT
+
+## Dades de l'enquesta
+
+Primera ullada a les dades per detectar anomalies
+```{r}
+summary(dades_final[,1:3])     
+# veiem que tenim edats = 1. haurem d'imputar
+
+str(dades_final[,1:3])
+
+dades_final$Edat_client <- as.numeric(dades_final$Edat_client)
+#dades_final$Gènere_client <- as.factor(dades_final$Gènere_client)
+#dades_final$Compra_client <- as.factor(dades_final$Compra_client)
+```
+
+
+Descriptiva i gràfics
+```{r, warning = FALSE}
+library(psych)
+library(ggplot2)
+
+## Edat
+table(dades_final$Edat_client)
+describe(dades_final$Edat_client)
+ggplot(dades_final, aes(x=Edat_client)) + geom_bar(fill="skyblue3") + labs(x="Edat", title="Distribució d'edats", y="Recompte", fill = "")  +  theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 22))
+
+## Gènere
+table(dades_final$Gènere_client)
+# ggplot(dades_final, aes(x=Gènere_client)) + geom_bar(color="black", fill="lightblue", binwidth=2) + theme_minimal()
+ggplot(dades_final, aes(x = reorder(Gènere_client, -table(Gènere_client)[Gènere_client]), fill = Gènere_client)) + geom_bar(aes(y = after_stat(count / sum(count) * 100))) + geom_text(stat = "count", aes(label = sprintf("%.1f%%", after_stat(count / sum(count) * 100))), vjust = -0.5) + scale_fill_brewer(palette = "Blues") + labs(x = "", title = "Distribució del gènere", y = "Percentatge", fill = "") + scale_y_continuous(labels = scales::percent_format(scale = 1)) + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 22))
+
+## Preferència de compra
+table(dades_final$Compra_client)
+# ggplot(dades_final, aes(x=Compra_client)) + geom_bar(color="black", fill="lightblue", binwidth=2) + theme_minimal()
+ggplot(dades_final, aes(x = reorder(Compra_client, -table(Compra_client)[Compra_client]), fill = Compra_client)) + geom_bar(aes(y = after_stat(count / sum(count) * 100))) + geom_text(stat = "count", aes(label = sprintf("%.1f%%", after_stat(count / sum(count) * 100))), vjust = 0.2) + scale_fill_brewer(palette = "Blues") + labs(x = "", title = "Preferència de compra", y = "Percentatge", fill = "") + scale_y_continuous(labels = scales::percent_format(scale = 1)) + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 22))
+```
+
+
+Llegim les dades imputades
+```{r}
+dades_final2 <- readRDS("dades_final2.RData")
+```
+
+Re-grafiquem l'edat
+```{r}
+## Edat
+table(dades_final2$Edat_client)
+describe(dades_final2$Edat_client)
+
+ggplot(dades_final2, aes(x = Edat_client, fill = Edat_client)) + geom_bar(fill = "skyblue3", aes(y = after_stat(count / sum(count) * 100))) + scale_fill_brewer(palette="Blues") + labs(x = "", title = "Distribució d'edats", y = "Percentatge", fill = "") + scale_y_continuous(labels = scales::percent_format(scale = 1)) + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 22))
+```
+
+
+Nº de rànquings per cada peça de roba
+```{r}
+contador_rks <- rep(0, 100)
+for(i in 1:dim(dades_final2)[1]){
+  for(j in 64:163){
+    if(!is.na(dades_final2[i,j])){
+      contador_rks[j-63] <- contador_rks[j-63] + 1
+    }
+  }
+}
+contador_rks_df <- data.frame(id = c(1:100), contador_rks=contador_rks)
+
+mitjana <- mean(contador_rks_df$contador_rks)
+
+ggplot(contador_rks_df, aes(x=id, y=contador_rks)) + geom_col(fill="skyblue3") +  geom_hline(yintercept = mitjana, color = "midnightblue", linetype = "solid", size = 0.5) + scale_x_continuous(breaks = seq(0, 100, by = 10)) + labs(x="Imatge", title="Nº d'aparicions en rànquings per imatge", y="Recompte", fill = "") + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 21))
+```
+
+
+Descriptiva i gràfics
+```{r}
+library(kableExtra)
+
+## Color
+cbPalette <- c("#E8E9EB", "#4169E1", "#999999", "#613613", "#000000", "#CC79A7", "#D55E00", "#74C365", "#B53737")
+cbPalette2 <- c("#F5F5DC", "#E8E9EB", "#4169E1", "#999999", "#613613", "#000000", "#CC79A7", "#74C365", "#B53737")
+cbPalette3 <- c("#F5F5DC", "#E8E9EB", "#4169E1", "#999999", "#000000", "#CC79A7", "#D55E00", "#74C365", "#B53737")
+
+# primeres posicions
+colors_primeres <- data.frame(as.factor(dades_final2[,14]), as.factor(dades_final2[,15]), as.factor(dades_final2[,16]))
+
+ggplot(colors_primeres, aes(x = reorder(colors_primeres[,1], -table(colors_primeres[,1])[colors_primeres[,1]]), fill = colors_primeres[,1])) + geom_bar(aes(y = after_stat(count / sum(count) * 100))) + geom_text(stat = "count", aes(label = sprintf("%.1f%%", after_stat(count / sum(count) * 100))), vjust = 0.2) + scale_fill_manual(values=cbPalette) + labs(x = "", title = "Distribució de colors a la primera posició", y = "Percentatge", fill = "") + scale_y_continuous(labels = scales::percent_format(scale = 1)) + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 20))
+
+ggplot(colors_primeres, aes(x = reorder(colors_primeres[,2], -table(colors_primeres[,2])[colors_primeres[,2]]), fill = colors_primeres[,2])) + geom_bar(aes(y = after_stat(count / sum(count) * 100))) + geom_text(stat = "count", aes(label = sprintf("%.1f%%", after_stat(count / sum(count) * 100))), vjust = 0.2) + scale_fill_manual(values=cbPalette) + labs(x = "", title = "Distribució de colors a la segona posició", y = "Percentatge", fill = "") + scale_y_continuous(labels = scales::percent_format(scale = 1)) + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 20))
+
+ggplot(colors_primeres, aes(x = reorder(colors_primeres[,3], -table(colors_primeres[,3])[colors_primeres[,3]]), fill = colors_primeres[,3])) + geom_bar(aes(y = after_stat(count / sum(count) * 100))) + geom_text(stat = "count", aes(label = sprintf("%.1f%%", after_stat(count / sum(count) * 100))), vjust = 0.2) + scale_fill_manual(values=cbPalette) + labs(x = "", title = "Distribució de colors a la tercera posició", y = "Percentatge", fill = "") + scale_y_continuous(labels = scales::percent_format(scale = 1)) + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 20))
+
+
+# últimes posicions
+colors_ultimes <- data.frame(as.factor(dades_final2[,23]), as.factor(dades_final2[,22]), as.factor(dades_final2[,21]))
+
+ggplot(colors_ultimes, aes(x = reorder(colors_ultimes[,1], -table(colors_ultimes[,1])[colors_ultimes[,1]]), fill = colors_ultimes[,1])) + geom_bar(aes(y = after_stat(count / sum(count) * 100))) + geom_text(stat = "count", aes(label = sprintf("%.1f%%", after_stat(count / sum(count) * 100))), vjust = 0.2) + scale_fill_manual(values=cbPalette2) + labs(x = "", title = "Distribució de colors a l'última posició", y = "Percentatge", fill = "") + scale_y_continuous(labels = scales::percent_format(scale = 1)) + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 20))
+
+ggplot(colors_ultimes, aes(x = reorder(colors_ultimes[,2], -table(colors_ultimes[,2])[colors_ultimes[,2]]), fill = colors_ultimes[,2])) + geom_bar(aes(y = after_stat(count / sum(count) * 100))) + geom_text(stat = "count", aes(label = sprintf("%.1f%%", after_stat(count / sum(count) * 100))), vjust = 0.2) + scale_fill_manual(values=cbPalette3) + labs(x = "", title = "Distribució de colors a la penúltima posició", y = "Percentatge", fill = "") + scale_y_continuous(labels = scales::percent_format(scale = 1)) + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 20))
+
+ggplot(colors_ultimes, aes(x = reorder(colors_ultimes[,3], -table(colors_ultimes[,3])[colors_ultimes[,3]]), fill = colors_ultimes[,3])) + geom_bar(aes(y = after_stat(count / sum(count) * 100))) + geom_text(stat = "count", aes(label = sprintf("%.1f%%", after_stat(count / sum(count) * 100))), vjust = 0.2) + scale_fill_manual(values=cbPalette3) + labs(x = "", title = "Distribució de colors a l'antepenúltima posició", y = "Percentatge", fill = "") + scale_y_continuous(labels = scales::percent_format(scale = 1)) + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 20))
+```
+
+
+```{r}
+## Tipus d'estampat
+
+# primeres posicions
+estampat_primeres <- data.frame(as.factor(dades_final2[,24]), as.factor(dades_final2[,25]), as.factor(dades_final2[,26]))
+
+ggplot(estampat_primeres, aes(x = reorder(estampat_primeres[,1], -table(estampat_primeres[,1])[estampat_primeres[,1]]), fill = estampat_primeres[,1])) + geom_bar(aes(y = after_stat(count / sum(count) * 100))) + geom_text(stat = "count", aes(label = sprintf("%.1f%%", after_stat(count / sum(count) * 100))), vjust = 0.2) + scale_fill_brewer(palette="Blues") + labs(x = "", title = "Tipus d'estampat a la primera posició", y = "Percentatge", fill = "") + scale_y_continuous(labels = scales::percent_format(scale = 1)) + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 20))
+
+ggplot(estampat_primeres, aes(x = reorder(estampat_primeres[,2], -table(estampat_primeres[,2])[estampat_primeres[,2]]), fill = estampat_primeres[,2])) + geom_bar(aes(y = after_stat(count / sum(count) * 100))) + geom_text(stat = "count", aes(label = sprintf("%.1f%%", after_stat(count / sum(count) * 100))), vjust = 0.2) + scale_fill_brewer(palette="Blues") + labs(x = "", title = "Tipus d'estampat a la segona posició", y = "Percentatge", fill = "") + scale_y_continuous(labels = scales::percent_format(scale = 1)) + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 20))
+
+ggplot(estampat_primeres, aes(x = reorder(estampat_primeres[,3], -table(estampat_primeres[,3])[estampat_primeres[,3]]), fill = estampat_primeres[,3])) + geom_bar(aes(y = after_stat(count / sum(count) * 100))) + geom_text(stat = "count", aes(label = sprintf("%.1f%%", after_stat(count / sum(count) * 100))), vjust = 0.2) + scale_fill_brewer(palette="Blues") + labs(x = "", title = "Tipus d'estampat a la tercera posició", y = "Percentatge", fill = "") + scale_y_continuous(labels = scales::percent_format(scale = 1)) + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 20))
+
+
+# últimes posicions
+estampat_ultimes <- data.frame(as.factor(dades_final2[,33]), as.factor(dades_final2[,32]), as.factor(dades_final2[,31]))
+
+ggplot(estampat_ultimes, aes(x = reorder(estampat_ultimes[,1], -table(estampat_ultimes[,1])[estampat_ultimes[,1]]), fill = estampat_ultimes[,1])) + geom_bar(aes(y = after_stat(count / sum(count) * 100))) + geom_text(stat = "count", aes(label = sprintf("%.1f%%", after_stat(count / sum(count) * 100))), vjust = 0.2) + scale_fill_brewer(palette="Blues") + labs(x = "", title = "Tipus d'estampat a l'última posició", y = "Percentatge", fill = "") + scale_y_continuous(labels = scales::percent_format(scale = 1)) + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 20))
+
+ggplot(estampat_ultimes, aes(x = reorder(estampat_ultimes[,2], -table(estampat_ultimes[,2])[estampat_ultimes[,2]]), fill = estampat_ultimes[,2])) + geom_bar(aes(y = after_stat(count / sum(count) * 100))) + geom_text(stat = "count", aes(label = sprintf("%.1f%%", after_stat(count / sum(count) * 100))), vjust = 0.2) + scale_fill_brewer(palette="Blues") + labs(x = "", title = "Tipus d'estampat a la penúltima posició", y = "Percentatge", fill = "") + scale_y_continuous(labels = scales::percent_format(scale = 1)) + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 20))
+
+ggplot(estampat_ultimes, aes(x = reorder(estampat_ultimes[,3], -table(estampat_ultimes[,3])[estampat_ultimes[,3]]), fill = estampat_ultimes[,3])) + geom_bar(aes(y = after_stat(count / sum(count) * 100))) + geom_text(stat = "count", aes(label = sprintf("%.1f%%", after_stat(count / sum(count) * 100))), vjust = 0.2) + scale_fill_brewer(palette="Blues") + labs(x = "", title = "Tipus d'estampat a l'antepenúltima posició", y = "Percentatge", fill = "") + scale_y_continuous(labels = scales::percent_format(scale = 1)) + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 20))
+```
+
+
+```{r}
+## Marca
+marca_bin <- matrix(ncol = 14, nrow = 108)
+for(i in 1:dim(dades_final2)[1]){
+  for(j in 4:13){
+    if(dades_final2[i,j] == "Sense marca visible"){
+      marca_bin[i,j] <- "Sense marca visible"
+    } else {
+      marca_bin[i,j] <- "Amb marca visible"
+    }
+  }
+}
+marca_bin <- marca_bin[,4:13]
+
+
+# primeres posicions
+marca_primeres <- data.frame(as.factor(marca_bin[,1]), as.factor(marca_bin[,2]), as.factor(marca_bin[,3]))
+
+ggplot(marca_primeres, aes(x = marca_primeres[,1], fill = marca_primeres[,1])) + geom_bar(aes(y = after_stat(count / sum(count) * 100))) + geom_text(stat = "count", aes(label = sprintf("%.1f%%", after_stat(count / sum(count) * 100))), vjust = 0.2) + scale_fill_brewer(palette="Blues") + labs(x = "", title = "Presència de marca a la primera posició", y = "Percentatge", fill = "") + scale_y_continuous(labels = scales::percent_format(scale = 1)) + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 20))
+
+ggplot(marca_primeres, aes(x = marca_primeres[,2], fill = marca_primeres[,2])) + geom_bar(aes(y = after_stat(count / sum(count) * 100))) + geom_text(stat = "count", aes(label = sprintf("%.1f%%", after_stat(count / sum(count) * 100))), vjust = 0.2) + scale_fill_brewer(palette="Blues") + labs(x = "", title = "Presència de marca a la segona posició", y = "Percentatge", fill = "") + scale_y_continuous(labels = scales::percent_format(scale = 1)) + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 20))
+
+ggplot(marca_primeres, aes(x = marca_primeres[,3], fill = marca_primeres[,3])) + geom_bar(aes(y = after_stat(count / sum(count) * 100))) + geom_text(stat = "count", aes(label = sprintf("%.1f%%", after_stat(count / sum(count) * 100))), vjust = 0.2) + scale_fill_brewer(palette="Blues") + labs(x = "", title = "Presència de marca a la tercera posició", y = "Percentatge", fill = "") + scale_y_continuous(labels = scales::percent_format(scale = 1)) + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 20))
+
+
+# últimes posicions
+marca_ultimes <- data.frame(as.factor(marca_bin[,10]), as.factor(marca_bin[,9]), as.factor(marca_bin[,8]))
+
+ggplot(marca_ultimes, aes(x = marca_ultimes[,1], fill = marca_ultimes[,1])) + geom_bar(aes(y = after_stat(count / sum(count) * 100))) + geom_text(stat = "count", aes(label = sprintf("%.1f%%", after_stat(count / sum(count) * 100))), vjust = 0.2) + scale_fill_brewer(palette="Blues") + labs(x = "", title = "Presència de marca a l'última posició", y = "Percentatge", fill = "") + scale_y_continuous(labels = scales::percent_format(scale = 1)) + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 20))
+
+ggplot(marca_ultimes, aes(x = marca_ultimes[,2], fill = marca_ultimes[,2])) + geom_bar(aes(y = after_stat(count / sum(count) * 100))) + geom_text(stat = "count", aes(label = sprintf("%.1f%%", after_stat(count / sum(count) * 100))), vjust = 0.2) + scale_fill_brewer(palette="Blues") + labs(x = "", title = "Presència de marca a la penúltima posició", y = "Percentatge", fill = "") + scale_y_continuous(labels = scales::percent_format(scale = 1)) + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 20))
+
+ggplot(marca_ultimes, aes(x = marca_ultimes[,3], fill = marca_ultimes[,3])) + geom_bar(aes(y = after_stat(count / sum(count) * 100))) + geom_text(stat = "count", aes(label = sprintf("%.1f%%", after_stat(count / sum(count) * 100))), vjust = 0.2) + scale_fill_brewer(palette="Blues") + labs(x = "", title = "Presència de marca a l'antepenúltima posició", y = "Percentatge", fill = "") + scale_y_continuous(labels = scales::percent_format(scale = 1)) + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 20))
+```
+
+
+
+
+## Dades de la descriptiva de les imatges
+
+Llegim les dades
+```{r}
+library(readxl)
+descriptiva_img <- as.data.frame(read_excel("descriptiva_imatges.xlsx"))
+descriptiva_img$Color <- as.factor(descriptiva_img$Color)
+descriptiva_img$Estampat <- as.factor(descriptiva_img$Estampat)
+```
+
+Descriptiva i gràfics
+```{r, warning=FALSE}
+## Marca
+marca_bin <- c()
+for(i in 1:dim(descriptiva_img)[1]){
+  if(is.na(descriptiva_img$Marca[i])){
+    marca_bin[i] <- "Sense marca visible"
+  } else {
+    marca_bin[i] <- "Amb marca visible"
+  }
+}
+
+table(marca_bin)
+
+ggplot(as.data.frame(marca_bin), aes(x = reorder(as.data.frame(marca_bin)[,1], -table(as.data.frame(marca_bin)[,1])[as.data.frame(marca_bin)[,1]]), fill = as.data.frame(marca_bin)[,1])) + geom_bar(aes(y = after_stat(count / sum(count) * 100))) + geom_text(stat = "count", aes(label = sprintf("%.1f%%", after_stat(count / sum(count) * 100))), vjust = -0.5) + scale_fill_brewer(palette="Blues") + labs(x = "", title = "Marca a la imatge", y = "Percentatge", fill = "") + scale_y_continuous(labels = scales::percent_format(scale = 1)) + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 22))
+
+## Color
+table(descriptiva_img$Color)
+
+cbPalette4 <- c("#F5F5DC", "#E8E9EB", "#4169E1", "#999999", "#613613", "#000000", "#CC79A7", "#D55E00", "#74C365", "#B53737")
+ggplot(descriptiva_img, aes(x = reorder(descriptiva_img$Color, -table(descriptiva_img$Color)[descriptiva_img$Color]), fill = descriptiva_img$Color)) + geom_bar(aes(y = after_stat(count / sum(count) * 100))) + geom_text(stat = "count", aes(label = sprintf("%.1f%%", after_stat(count / sum(count) * 100))), vjust = -0.5) + scale_fill_manual(values=cbPalette4) + labs(x = "", title = "Color principal", y = "Percentatge", fill = "") + scale_y_continuous(labels = scales::percent_format(scale = 1)) + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 22))
+
+## Estampat
+table(descriptiva_img$Estampat)
+
+ggplot(descriptiva_img, aes(x = reorder(descriptiva_img$Estampat, -table(descriptiva_img$Estampat)[descriptiva_img$Estampat]), fill = descriptiva_img$Estampat)) + geom_bar(aes(y = after_stat(count / sum(count) * 100))) + geom_text(stat = "count", aes(label = sprintf("%.1f%%", after_stat(count / sum(count) * 100))), vjust = -0.5) + scale_fill_brewer(palette="Blues") + labs(x = "", title = "Tipus d'estampat", y = "Percentatge", fill = "") + scale_y_continuous(labels = scales::percent_format(scale = 1)) + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 22))
+
+
+## Gènere model
+genere_model_fact <- c()
+for(i in 1:dim(descriptiva_img)[1]){
+  if(is.na(descriptiva_img$`Gènere model`[i])){
+    genere_model_fact[i] <- "Sense model"
+  } else if(descriptiva_img$`Gènere model`[i] == "Dona"){
+    genere_model_fact[i] <- "Dona"
+  } else{
+    genere_model_fact[i] <- "Home"
+  }
+}
+genere_model <- data.frame(genere_model_fact = as.factor(genere_model_fact))
+
+table(genere_model)
+
+ggplot(genere_model, aes(x = reorder(genere_model_fact, -table(genere_model_fact)[genere_model_fact]), fill = genere_model_fact)) + geom_bar(aes(y = after_stat(count / sum(count) * 100))) + geom_text(stat = "count", aes(label = sprintf("%.1f%%", after_stat(count / sum(count) * 100))), vjust = -0.5) + scale_fill_brewer(palette="Blues") + labs(x = "", title = "Gènere del model", y = "Percentatge", fill = "") + scale_y_continuous(labels = scales::percent_format(scale = 1)) + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 22))
+
+
+## Edat model
+edat_model_fact <- c()
+for(i in 1:dim(descriptiva_img)[1]){
+  if(is.na(descriptiva_img$`Edat model`[i])){
+    edat_model_fact[i] <- "Sense 
+    model"
+  }else {
+    edat_model_fact[i] <- descriptiva_img$`Edat model`[i]
+  } 
+}
+edat_model <- data.frame(edat_model_fact = as.factor(edat_model_fact))
+
+table(edat_model)
+
+ggplot(edat_model, aes(x = edat_model_fact, fill = edat_model_fact)) + geom_bar(fill = "skyblue3", aes(y = after_stat(count / sum(count) * 100))) + scale_fill_brewer(palette="Blues") + labs(x = "", title = "Edat del model", y = "Percentatge", fill = "") + scale_y_continuous(labels = scales::percent_format(scale = 1)) + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 22))
+
+## Tipus de prenda
+table(descriptiva_img$`Tipus prenda`)
+
+ggplot(descriptiva_img, aes(x = descriptiva_img$`Tipus prenda`, fill = descriptiva_img$`Tipus prenda`)) + geom_bar(aes(y = after_stat(count / sum(count) * 100))) + geom_text(stat = "count", aes(label = sprintf("%.1f%%", after_stat(count / sum(count) * 100))), vjust = -0.5) + scale_fill_brewer(palette="Blues") + labs(x = "", title = "Tipus de prenda", y = "Percentatge", fill = "") + scale_y_continuous(labels = scales::percent_format(scale = 1)) + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 22), axis.text.x = element_blank())
+```
+
+
+
+## BIVARIANT
+
+### Color x gènere enquestats 
+```{r}
+# colors <- c(dades_final2$Color_Rànking1, dades_final2$Color_Rànking2, dades_final2$Color_Rànking3, dades_final2$Color_Rànking4, dades_final2$Color_Rànking5, dades_final2$Color_Rànking6, dades_final2$Color_Rànking7, dades_final2$Color_Rànking8, dades_final2$Color_Rànking9, dades_final2$Color_Rànking10)
+# genere <- rep(dades_final2$Gènere_client, 10)
+# colors_genere <- data.frame(colors = colors, genere = genere)
+# table(colors_genere$colors,colors_genere$genere)
+# posicio <- rep(c("Primera posició", "Segona posició", "Tercera posició", "Quarta posició", "Cinquena posició", "Sisena posició", "Setena posició", "Vuitena posició", "Nova posició", "Desena posició"), each = 108)
+
+colors <- c(dades_final2$Color_Rànking1, dades_final2$Color_Rànking2, dades_final2$Color_Rànking3)
+genere <- rep(dades_final2$Gènere_client, 3)
+posicio <- rep(c("Primera posició", "Segona posició", "Tercera posició"), each = 108)
+color_genere_posicio <- data.frame(colors=colors, genere=genere, posicio=posicio)
+
+chisq.test(colors, genere)
+
+ggplot(color_genere_posicio, aes(x = reorder(colors, -table(colors)[colors]), fill = genere)) + geom_bar(position = "dodge", aes(y = after_stat(count / sum(count) * 100))) + scale_fill_brewer(palette="Blues") + labs(x = "", title = "Colors per gènere a les 3 primeres posicions (agrupat)", y = "Percentatge", fill = "") + scale_y_continuous(labels = scales::percent_format(scale = 1)) + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 17))
+```
+
+
+### Edat enquestats x edat models
+```{r, warning = FALSE}
+dades_final2$Edat_client <- as.numeric(dades_final2$Edat_client)
+#dades_final2$Edat_model_Rànking1 <- as.numeric(dades_final2$Edat_model_Rànking1)
+#dades_final2$Edat_model_Rànking10 <- as.numeric(dades_final2$Edat_model_Rànking10)
+
+edats_clients <- rep(dades_final2$Edat_client, 10)
+edats_models <- c(dades_final2$Edat_model_Rànking1, dades_final2$Edat_model_Rànking2, dades_final2$Edat_model_Rànking3, dades_final2$Edat_model_Rànking4, dades_final2$Edat_model_Rànking5, dades_final2$Edat_model_Rànking6, dades_final2$Edat_model_Rànking7, dades_final2$Edat_model_Rànking8, dades_final2$Edat_model_Rànking9, dades_final2$Edat_model_Rànking10)
+which(is.na(edats_models))
+
+edats_total <- data.frame(edats_clients = edats_clients, edats_models = edats_models)
+edats_total2 <- edats_total[-which(edats_total$edats_models == "Sense model"), ]
+which(is.na(edats_total2))
+
+cor(edats_total2$edats_clients, as.numeric(edats_total2$edats_models))
+
+## Primera posició
+which(dades_final2$Edat_model_Rànking1 == "Sense model")    # no n'hi ha cap
+cor(dades_final2$Edat_client,  as.numeric(dades_final2$Edat_model_Rànking1), method = "pearson", use = "complete.obs")
+
+ggplot(dades_final2, aes(x=Edat_client, y=Edat_model_Rànking1)) + geom_point() + scale_fill_brewer(palette="Blues") + labs(x="", title="Edat individu vs edat model a la primera posició", y="Recompte", fill = "") + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 18))
+
+## Última posició
+dades_final_2_2 <- dades_final2[-which(dades_final2$Edat_model_Rànking10 == "Sense model"), ]
+cor(dades_final_2_2$Edat_client,  as.numeric(dades_final_2_2$Edat_model_Rànking10), method = "pearson", use = "complete.obs")
+
+ggplot(dades_final2, aes(x=Edat_client, y=Edat_model_Rànking10)) + geom_point() + scale_fill_brewer(palette="Blues") + labs(x="", title="Edat individu vs edat model a l'última posició", y="Recompte", fill = "") + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 18))
+```
+
+
+
+
+### Gènere enquestats x gènere models
+```{r, warning = FALSE}
+generes_clients <- rep(dades_final2$Gènere_client, 10)
+generes_models <- c(dades_final2$Gènere_model_Rànking1, dades_final2$Gènere_model_Rànking2, dades_final2$Gènere_model_Rànking3, dades_final2$Gènere_model_Rànking4, dades_final2$Gènere_model_Rànking5, dades_final2$Gènere_model_Rànking6, dades_final2$Gènere_model_Rànking7, dades_final2$Gènere_model_Rànking8, dades_final2$Gènere_model_Rànking9, dades_final2$Gènere_model_Rànking10)
+
+chisq.test(generes_clients, generes_models)
+
+## Primera posició
+ggplot(dades_final2, aes(x = Gènere_client, fill = Gènere_model_Rànking1)) + geom_bar(position = "dodge", aes(y = after_stat(count / sum(count) * 100))) + scale_fill_brewer(palette="Blues") + labs(x = "", title = "Gènere individu vs gènere model a la primera posició", y = "Percentatge", fill = "") + scale_y_continuous(labels = scales::percent_format(scale = 1)) + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 17))
+
+## Última posició
+ggplot(dades_final2, aes(x = Gènere_client, fill = Gènere_model_Rànking10)) + geom_bar(position = "dodge", aes(y = after_stat(count / sum(count) * 100))) + scale_fill_brewer(palette="Blues") + labs(x = "", title = "Gènere individu vs gènere model a l'última posició", y = "Percentatge", fill = "") + scale_y_continuous(labels = scales::percent_format(scale = 1)) + theme_minimal() + theme(plot.title = element_text(face = "bold", color = "black", size = 17))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

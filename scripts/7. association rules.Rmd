@@ -1,0 +1,119 @@
+---
+title: "Association rules"
+author: "Clara Tarragó"
+date: '2025-05-11'
+output: html_document
+---
+
+# ASSOCIATION RULES
+
+
+Llegim les dades imputades
+```{r}
+library(arules)
+library(arulesViz)
+library(FactoMineR)
+library(tidyverse)
+
+dades_final2 <- readRDS("dades_final2.RData")
+str(dades_final2)
+
+# només dades enquesta
+dades_final2 <- dades_final2[,-c(4:63)]
+```
+
+Transformem les dades en format transacció
+```{r}
+for (j in 1:ncol(dades_final2)) {if(class(dades_final2[,j])=="character") dades_final2[,j]<- as.factor(dades_final2[,j])}
+for (j in 1:ncol(dades_final2)) {if(class(dades_final2[,j])=="numeric") dades_final2[,j]<- as.factor(dades_final2[,j])}
+
+
+transaccions <- as(dades_final2,"transactions")
+transaccions
+summary(transaccions)
+# density of 0.0212766 --> el suport freqüent es del 2%. 
+```
+
+Estudi prèvi
+```{r}
+# MIDA DE LES TRANSACCIONS
+inspect(transaccions[1:6])
+SIZE <- size(transaccions)
+summary(SIZE)
+quantile(SIZE, probs = seq(0,1,0.1))
+data.frame(SIZE) %>% ggplot(aes(x = SIZE)) + geom_histogram() + labs(title = "Distribució de la mida de les transaccions",x = "Mida") + theme_minimal()
+
+
+# SUPORT DELS ÍTEMS
+itemFrequency(transaccions)   
+itemFrequencyPlot(transaccions, topN=5, cex.names=0.5)
+itemFrequencyPlot(transaccions, support=0.1, cex.names = 0.5)    # grafiquem tots els ítems amb un support >= 0.1
+itemFrequencyPlot(transaccions,topN=100, type="absolute", cex.names = 0.3)
+# el mínim suport que volem buscar ha d'estar a la cua del gràfic, a la dreta. allà trobarem les associacions no típiques,
+frequency_items <- itemFrequency(x = transaccions, type = "relative")
+frequency_items %>% sort(decreasing = TRUE) %>% head(5)
+
+# Valor a basar-nos per determinar el suport
+itemFrequencyPlot(transaccions,topN=100, type="absolute", cex.names = 0.3, col = "skyblue3")
+abline(h=3, col = "navy", lwd=4)
+
+
+freqs <- itemFrequency(transaccions, type = "absolute")
+freqs_sorted <- sort(freqs, decreasing = TRUE)
+top100 <- freqs_sorted[1:100]
+min(top100)
+
+n_total <- length(transaccions)
+freq_min <- 3
+(support_minim <- round(freq_min / n_total,2))
+```
+
+
+ITEMSETS FREQÜENTS
+```{r}
+itemsets <- apriori(data = transaccions, parameter = list(support = support_minim, minlen = 1, maxlen = 5, target = "frequent itemset"))
+summary(itemsets)
+inspect(itemsets[1:5])
+top_20_itemsets <- sort(itemsets, by = "support", decreasing = TRUE)[1:20]
+(inspect(top_20_itemsets))
+
+# ITEMSETS AMB MAJOR SUPORT I MÉS D'UN ÍTEM A LA REGLA
+inspect(sort(itemsets[size(itemsets) > 1], decreasing = TRUE))
+
+# exemple: itemsets que incloguin que el client és dona
+itemsets_filtrado <- arules::subset(itemsets, subset = items %in% "Gènere_client=Dona")
+inspect(itemsets_filtrado[1:10])
+```
+
+
+ASSOCIATION RULES
+```{r}
+(rules = apriori(transaccions, parameter = list(support=support_minim, maxlen = 5, minlen=2)))
+inspect(sort(x = rules, decreasing = TRUE, by = "confidence"))
+
+# ens assegurem que les regles no siguin redundants
+(reglas_Noredund <- rules[!is.redundant(x = rules, measure = "confidence")])
+
+## segons confiança
+myrules1 <- sort(rules, by = "confidence")
+inspect(myrules1)
+
+## segons lift
+myrules2 <- sort(rules, by = "lift")
+inspect(myrules2)
+
+# exemple: regles que incloguin que el client és dona
+(rules_tramits_dona <- subset(rules, subset = rhs %in% "Gènere_client=Dona"))
+sorted_rules_tramits_dona <- sort(rules_tramits_dona, by="lift")
+inspect(sorted_rules_tramits_dona)
+```
+
+
+
+
+
+
+
+
+
+

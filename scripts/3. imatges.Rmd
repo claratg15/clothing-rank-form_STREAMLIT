@@ -1,0 +1,280 @@
+---
+title: "imatges"
+author: "Clara Tarragó"
+date: '2025-05-02'
+output: html_document
+---
+
+
+```{r}
+image_paths <- list.files("~/Desktop/tfg/TFG/subset_100_images", full.names = TRUE)
+```
+
+
+# VGG16
+
+Extracció característiques de les imatges amb VGG16
+```{r}
+#install.packages("keras")
+#install.packages("tensorflow")
+library(keras)
+library(tensorflow)
+
+# Carreguem model VGG16 preentrenat (sense la capa de classificació)
+model <- application_vgg16(weights = "imagenet", include_top = FALSE, input_shape = c(224, 224, 3))
+
+# Funció per preprocessar i extreure característiques d'una imatge amb VGG16
+extract_features <- function(image_path) {
+  img <- image_load(image_path, target_size = c(224, 224))
+  img_array <- image_to_array(img)
+  img_array <- array_reshape(img_array, c(1, 224, 224, 3))
+  img_array <- imagenet_preprocess_input(img_array)
+  features <- model %>% predict(img_array)
+  as.vector(features)
+}
+
+# Ho apliquem a les 100 imatges
+image_features <- lapply(image_paths, extract_features)
+image_features <- do.call(rbind, image_features)
+```
+
+
+Similitud del cosinus
+```{r}
+# Funció per calcular la matriu amb les similituds del cosinus entre imatges
+cosine_similarity <- function(feature_matrix) {
+  # Normalitzem les dades
+  norm <- sqrt(rowSums(feature_matrix^2))
+  normalized <- feature_matrix / norm
+  
+  sim_matrix <- tcrossprod(normalized)
+  return(sim_matrix)
+}
+
+# Ho apliquem als vectors de característiques de les 100 imatges
+cos_sim_matrix <- cosine_similarity(image_features)
+
+# Posem els noms de les imatges per identificar-les
+rownames(cos_sim_matrix) <- basename(image_paths)
+colnames(cos_sim_matrix) <- basename(image_paths)
+
+
+## Càlcul similitud entre 2 imatges similars i entre 2 imatges diferents
+sim_similars_vgg16 <- cos_sim_matrix["NE222O00T-A11@8.jpg", "M0M22O00C-A11@10.jpg"]
+sim_diferents_vgg16 <- cos_sim_matrix["SW822O003-K11@8.jpg", "SU221J0TJ-K11@8.jpg"]
+```
+
+
+# ResNet50
+
+Extracció característiques de les imatges amb ResNet50
+```{r}
+# Carreguem model ResNet50 preentrenat (sense la capa de classificació)
+model <- application_resnet50(weights = "imagenet", include_top = FALSE, input_shape = c(224, 224, 3))
+
+# Funció per preprocessar i extreure característiques d'una imatge amb ResNet50
+extract_features <- function(image_path) {
+  img <- image_load(image_path, target_size = c(224, 224))
+  img_array <- image_to_array(img)
+  img_array <- array_reshape(img_array, c(1, 224, 224, 3))
+  img_array <- imagenet_preprocess_input(img_array)
+  features <- model %>% predict(img_array)
+  as.vector(features)
+}
+
+# Ho apliquem a les 100 imatges
+image_paths <- list.files("~/Desktop/tfg/TFG/subset_100_images", full.names = TRUE)
+image_features <- lapply(image_paths, extract_features)
+image_features <- do.call(rbind, image_features)
+```
+
+
+Similitud del cosinus
+```{r}
+# Funció per calcular la matriu amb les similituds del cosinus entre imatges
+cosine_similarity <- function(feature_matrix) {
+  # Normalitzem les dades
+  norm <- sqrt(rowSums(feature_matrix^2))
+  normalized <- feature_matrix / norm
+  
+  sim_matrix <- tcrossprod(normalized)
+  return(sim_matrix)
+}
+
+# Ho apliquem als vectors de característiques de les 100 imatges
+cos_sim_matrix <- cosine_similarity(image_features)
+
+# Posem els noms de les imatges per identificar-les
+rownames(cos_sim_matrix) <- basename(image_paths)
+colnames(cos_sim_matrix) <- basename(image_paths)
+
+## Càlcul similitud entre 2 imatges similars i entre 2 imatges diferents
+sim_similars_resnet50  <- cos_sim_matrix["NE222O00T-A11@8.jpg", "M0M22O00C-A11@10.jpg"]
+sim_diferents_resnet50 <- cos_sim_matrix["SW822O003-K11@8.jpg", "SU221J0TJ-K11@8.jpg"]
+```
+
+
+# Autoencoders
+
+Extracció característiques de les imatges amb autoencoders
+```{r}
+#library(reticulate)
+#tensorflow::tf$config$threading$set_inter_op_parallelism_threads(1)
+#tensorflow::tf$config$threading$set_intra_op_parallelism_threads(1)
+Sys.setenv("TF_DETERMINISTIC_OPS" = "1")
+library(keras)
+library(ggplot2)
+set.seed(123)
+tensorflow::tf$random$set_seed(123)
+
+# Funció per carregar i preprocessar imatges
+load_and_preprocess_image <- function(image_path) {
+  img <- image_load(image_path, target_size = c(64, 64))      # redimensionem a 64x64 para reduir cost computacional
+  img_array <- image_to_array(img)
+  img_array <- img_array / 255       # normalitzem [0,1]
+  img_array
+}
+
+# Definim l'autoencoder
+input_img <- layer_input(shape = c(64, 64, 3))
+
+# Encoder
+encoded <- input_img %>%
+  layer_conv_2d(32, c(3,3), activation = "relu", padding = "same") %>%
+  layer_max_pooling_2d(c(2,2)) %>%
+  layer_conv_2d(16, c(3,3), activation = "relu", padding = "same") %>%
+  layer_max_pooling_2d(c(2,2)) %>%
+  layer_flatten() %>%
+  layer_dense(units = 64, activation = "relu")      # espai latent de 64 dimensions
+
+# Decoder
+decoded <- encoded %>%
+  layer_dense(units = 16*16*16) %>%
+  layer_reshape(target_shape = c(16, 16, 16)) %>%
+  layer_conv_2d(16, c(3,3), activation = "relu", padding = "same") %>%
+  layer_upsampling_2d(c(2,2)) %>%
+  layer_conv_2d(32, c(3,3), activation = "relu", padding = "same") %>%
+  layer_upsampling_2d(c(2,2)) %>%
+  layer_conv_2d(3, c(3,3), activation = "sigmoid", padding = "same")
+
+# Carreguem els models d'autoencoder i encoder
+autoencoder <- keras_model(input_img, decoded)
+encoder <- keras_model(input_img, encoded)
+
+# Compilem l'autoencoder
+autoencoder %>% compile(optimizer = "adam", loss = "mse")
+
+# Entrenem l'autoencoder amb les 100 imatges preprocessades
+image_data <- lapply(image_paths, load_and_preprocess_image)
+image_data <- array_reshape(image_data, c(length(image_data), 64, 64, 3))
+history <- autoencoder %>% fit(x = image_data, y = image_data, epochs = 50, batch_size = 32, validation_split = 0.2, verbose = 1)
+
+# Usem l'encoder per obtenir els vectors de característiques
+image_features <- encoder %>% predict(image_data)
+
+save_model_hdf5(encoder, "encoder_model_3.h5")
+```
+
+
+Similitud del cosinus
+```{r}
+# Funció per calcular la matriu amb les similituds del cosinus entre imatges
+cosine_similarity <- function(feature_matrix) {
+  # Normalizem les dades
+  norm <- sqrt(rowSums(feature_matrix^2))
+  normalized <- feature_matrix / norm
+  
+  sim_matrix <- tcrossprod(normalized)
+  return(sim_matrix)
+}
+
+# Ho apliquem als vectors de característiques de les 100 imatges
+cos_sim_matrix <- cosine_similarity(image_features)
+
+# Posem els noms de les imatges per identificar-les
+rownames(cos_sim_matrix) <- basename(image_paths)
+colnames(cos_sim_matrix) <- basename(image_paths)
+
+## Càlcul similitud entre 2 imatges similars i entre 2 imatges diferents
+sim_similars_autoencoders <- cos_sim_matrix["NE222O00T-A11@8.jpg", "M0M22O00C-A11@10.jpg"]
+sim_diferents_autoencoders <- cos_sim_matrix["1VJ22S01Z-Q11@8.jpg", "SU221J0TJ-K11@8.jpg"]
+```
+
+
+
+# EfficientNet
+
+Extracció característiques de les imatges amb EfficientNet
+```{r} 
+image_dir <- "/Users/claratarragograu/Desktop/tfg/TFG/subset_100_images"
+
+# Funció per preprocessar una imatge
+preprocess_image <- function(image_path) {
+  img <- image_load(image_path, target_size = c(224, 224))
+  img_array <- image_to_array(img)
+  img_array <- array_reshape(img_array, c(1, dim(img_array)))
+  img_array <- imagenet_preprocess_input(img_array, mode = "tf")
+  return(img_array)
+}
+
+# Carregar el model EfficientNetB0 (sense la capa de classificació)
+model <- application_efficientnet_b0(include_top = FALSE, input_shape = c(224, 224, 3), pooling = "avg", weights = "imagenet")
+# pooling = "avg": per obtenir un vector
+
+# Llistar totes les imatges del directori
+image_files <- list.files(image_dir, pattern = "\\.(jpg|jpeg|png)$", full.names = TRUE)
+
+# Extreure característiques per a cada imatge
+features_list <- lapply(image_files, function(img_path) {
+  cat("Processant:", basename(img_path), "\n")
+  img_array <- preprocess_image(img_path)
+  features <- model %>% predict(img_array)
+  return(as.vector(features))
+})
+
+# Convertir a una matriu (files = imatges, columnes = característiques)
+features_matrix <- do.call(rbind, features_list)
+colnames(features_matrix) <- paste0("feature_", 1:ncol(features_matrix))
+rownames(features_matrix) <- basename(image_files)
+```
+
+
+Similitud del cosinus
+```{r}
+# Funció per calcular la matriu amb les similituds del cosinus entre imatges
+cosine_similarity <- function(feature_matrix) {
+  # Normalizem les dades
+  norm <- sqrt(rowSums(feature_matrix^2))
+  normalized <- feature_matrix / norm
+  
+  sim_matrix <- tcrossprod(normalized)
+  return(sim_matrix)
+}
+
+# Ho apliquem als vectors de característiques de les 100 imatges
+cos_sim_matrix <- cosine_similarity(features_matrix)
+
+# Posem els noms de les imatges per identificar-les
+rownames(cos_sim_matrix) <- basename(image_files)
+colnames(cos_sim_matrix) <- basename(image_files)
+
+## Càlcul similitud entre 2 imatges similars i entre 2 imatges diferents
+sim_similars_effnet <- cos_sim_matrix["NE222O00T-A11@8.jpg", "M0M22O00C-A11@10.jpg"]
+sim_diferents_effnet <- cos_sim_matrix["SW822O003-K11@8.jpg", "SU221J0TJ-K11@8.jpg"]
+```
+
+
+# Comparació dels 4 mètodes
+```{r}
+(dif_vgg16 <- sim_similars_vgg16-sim_diferents_vgg16)
+
+(dif_resnet50 <- sim_similars_resnet50-sim_diferents_resnet50)
+
+(dif_autoenc <- sim_similars_autoencoders-sim_diferents_autoencoders)
+
+(dif_effnet <- sim_similars_effnet-sim_diferents_effnet)
+
+max(dif_vgg16, dif_resnet50, dif_autoenc, dif_effnet)
+```
+
+

@@ -1,0 +1,204 @@
+---
+title: "Preprocessing"
+author: "Clara Tarragó"
+date: '2025-04-24'
+output: html_document
+---
+
+Llegim les dades
+```{r}
+library(readxl)
+respostes_enq <- as.data.frame(read.csv("respostes.csv"))
+descriptiva_img <- as.data.frame(read_excel("descriptiva_imatges.xlsx", sheet = "Hoja1"))
+```
+
+
+Creació i preparació dataset definitiu
+```{r}
+dades_final2 <- as.data.frame(matrix(ncol = (103+10*6), nrow = nrow(respostes_enq)))
+
+# Agafem gènere, edat i tipus preferit de compra dels enquestats
+dades_final2[1] <- respostes_enq$Gènere
+colnames(dades_final2)[1] <- "Gènere_client"
+dades_final2[2] <- respostes_enq$Edat
+colnames(dades_final2)[2] <- "Edat_client"
+dades_final2[3] <- respostes_enq$Compra
+colnames(dades_final2)[3] <- "Compra_client"
+
+
+# Omplim la part dels rànquings
+for(i in 1:dim(descriptiva_img)[1]){
+  colnames(dades_final2)[63+i] <- descriptiva_img[i,1]
+}
+
+for(i in 1:dim(respostes_enq)[1]){
+  for(j in 4:dim(respostes_enq)[2]){
+    for(k in 64:163){
+      if(respostes_enq[i,j] == colnames(dades_final2)[k]){
+        dades_final2[i,k] <- substring(colnames(respostes_enq)[j], 6, 7)
+      }else if(is.na(dades_final2[i,k])){
+        dades_final2[i,k] <- NA
+      }
+    }
+  }
+}
+
+# Omplim la part de la descriptiva de les imatges ranquejades
+noms_columnes <- rep(c("Marca", "Color", "Estampat", "Gènere_model", "Edat_model", "Tipus_prenda"), each = 10)
+
+colnames(dades_final2)[4] <- paste0(noms_columnes[1],"_Rànking", 1)
+j <- 1
+for(k in 2:length(noms_columnes)){
+    if(noms_columnes[k] == noms_columnes[k-1]){
+      j <- j+1
+    }else{
+      j <- 1
+    }
+    colnames(dades_final2)[k+3] <- paste0(noms_columnes[k],"_Rànking", j)
+}
+
+#for(k in id:(id+10)){
+for(i in 1:dim(dades_final2)[1]){
+  id <- seq(4, 63, by=10)
+  for(p in 4:13){
+    m <- 2
+    for(j in id){
+      k <- respostes_enq[i, p]
+      dades_final2[i,j] <- descriptiva_img[descriptiva_img[1]==k, m]
+      m <- m+1
+    }
+    id <- id+1
+  }
+}
+#}
+
+
+for(i in 1:dim(dades_final2)[1]){
+  for(j in 34:53){
+    if(is.na(dades_final2[i,j])){
+      dades_final2[i,j] <- "Sense model"
+    }
+  }
+}
+
+for(i in 1:dim(dades_final2)[1]){
+  for(j in 4:13){
+    if(is.na(dades_final2[i,j])){
+      dades_final2[i,j] <- "Sense marca visible"
+    }
+  }
+}
+
+saveRDS(dades_final2, "dades_final1.RData")
+```
+
+Arreglem la descriptiva de les imatges
+```{r}
+for(i in 1:dim(descriptiva_img)[1]){
+  if(is.na(descriptiva_img$`Gènere model`[i])){
+    descriptiva_img$`Gènere model`[i] <- "Sense model"
+  } else if(descriptiva_img$`Gènere model`[i] == "Dona"){
+    descriptiva_img$`Gènere model`[i] <- descriptiva_img$`Gènere model`[i]
+  } else{
+    descriptiva_img$`Gènere model`[i] <- descriptiva_img$`Gènere model`[i]
+  }
+}
+
+for(i in 1:dim(descriptiva_img)[1]){
+  if(is.na(descriptiva_img$`Edat model`[i])){
+    descriptiva_img$`Edat model`[i] <- "Sense model"
+  }else {
+    descriptiva_img$`Edat model`[i] <- descriptiva_img$`Edat model`[i]
+  } 
+}
+
+for(i in 1:dim(descriptiva_img)[1]){
+  if(is.na(descriptiva_img$Marca[i])){
+    descriptiva_img$Marca[i] <- "Sense marca visible"
+  } else {
+    descriptiva_img$Marca[i]<- descriptiva_img$Marca[i]
+  }
+}
+
+saveRDS(descriptiva_img, "descriptiva_img.RData")
+```
+
+
+## Opcions descartades
+```{r}
+dades_final <- as.data.frame(matrix(ncol = 103, nrow = nrow(respostes_enq)))
+dades_final[1] <- respostes_enq$Gènere
+colnames(dades_final)[1] <- "Gènere_client"
+dades_final[2] <- respostes_enq$Edat
+colnames(dades_final)[2] <- "Edat_client"
+dades_final[3] <- respostes_enq$Compra
+colnames(dades_final)[3] <- "Compra_client"
+
+for(i in 1:dim(descriptiva_img)[1]){
+  colnames(dades_final)[i+3] <- descriptiva_img[i,1]
+}
+
+for(i in 1:dim(respostes_enq)[1]){
+  for(j in 4:dim(respostes_enq)[2]){
+    for(k in 4:103){
+      if(respostes_enq[i,j] == colnames(dades_final)[k]){
+        dades_final[i,k] <- substring(colnames(respostes_enq)[j], 6, 7)
+      }else if(is.na(dades_final[i,k])){
+        dades_final[i,k] <- NA
+      }
+    }
+  }
+}
+```
+
+```{r}
+dades_final3 <- as.data.frame(matrix(ncol = 403, nrow = nrow(respostes_enq)))
+dades_final3[1] <- respostes_enq$Gènere
+colnames(dades_final3)[1] <- "Gènere_client"
+dades_final3[2] <- respostes_enq$Edat
+colnames(dades_final3)[2] <- "Edat_client"
+dades_final3[3] <- respostes_enq$Compra
+colnames(dades_final3)[3] <- "Compra_client"
+
+id <- seq(4, 303, by=3)
+for(i in 1:dim(descriptiva_img)[1]){
+  colnames(dades_final3)[id[i]] <- descriptiva_img[i,1]
+}
+
+for(i in 1:dim(respostes_enq)[1]){
+  for(j in 4:dim(respostes_enq)[2]){
+    for(k in 4:103){
+      if(respostes_enq[i,j] == colnames(dades_final3)[k]){
+        dades_final3[i,k] <- substring(colnames(respostes_enq)[j], 6, 7)
+      }else if(is.na(dades_final3[i,k])){
+        dades_final3[i,k] <- NA
+      }
+    }
+  }
+}
+
+
+id2 <- seq(5, 303, by=3)
+for(i in 1:dim(descriptiva_img)[1]){
+  dades_final3[,id2[i]] <- descriptiva_img[i,5]
+}
+
+for(i in id2){
+  colnames(dades_final3)[i] <- paste0("Gènere_model", "__", colnames(dades_final3)[i-1])
+}
+
+
+id3 <- seq(6, 303, by=3)
+for(i in 1:dim(descriptiva_img)[1]){
+  dades_final3[,id3[i]] <- descriptiva_img[i,6]
+}
+
+for(i in id3){
+  colnames(dades_final3)[i] <- paste0("Edat_model", "__", colnames(dades_final3)[i-2])
+}
+```
+
+
+
+
+
