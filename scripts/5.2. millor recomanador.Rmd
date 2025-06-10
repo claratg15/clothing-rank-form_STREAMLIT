@@ -427,8 +427,16 @@ item_similarity_combined <- function(imatge1, imatge2, ranquings_data, attr_data
   attr_x <- attr_data %>% filter(imatge == imatge1)
   attr_y <- attr_data %>% filter(imatge == imatge2)
   
-  if ("Edat_model" %in% names(attr_data)) {
+   if ("Edat_model" %in% names(attr_data)) {
     sim_edat_model <- 1 - abs(attr_x$Edat_model - attr_y$Edat_model)
+    
+    if(is.na(sim_edat_model)){
+      if(is.na(attr_x$Edat_model) && is.na(attr_y$Edat_model)){
+        sim_edat_model <- 1
+      }else{
+        sim_edat_model <- 0
+      }
+    }
   } else {
     sim_edat_model <- NA
   }
